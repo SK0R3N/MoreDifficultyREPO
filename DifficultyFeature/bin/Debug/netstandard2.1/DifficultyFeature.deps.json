@@ -12,7 +12,7 @@
           "BepInEx.Analyzers": "1.0.8",
           "BepInEx.AssemblyPublicizer.MSBuild": "0.4.1",
           "BepInEx.Core": "5.4.21",
-          "Linkoid.Repo.Plugin.Build": "0.2.1",
+          "Linkoid.Repo.Plugin.Build": "0.2.2",
           "R.E.P.O.GameLibs.Steam": "0.1.2-ngd.0",
           "UnityEngine.Modules": "2022.3.21",
           "Zehs.REPOLib": "1.5.0",
@@ -52,10 +52,10 @@
           }
         }
       },
-      "Linkoid.Repo.Common.Build/0.2.1": {},
-      "Linkoid.Repo.Plugin.Build/0.2.1": {
+      "Linkoid.Repo.Common.Build/0.2.2": {},
+      "Linkoid.Repo.Plugin.Build/0.2.2": {
         "dependencies": {
-          "Linkoid.Repo.Common.Build": "0.2.1"
+          "Linkoid.Repo.Common.Build": "0.2.2"
         }
       },
       "Microsoft.NETCore.Platforms/1.1.0": {},
@@ -458,19 +458,19 @@
       "path": "harmonyx/2.7.0",
       "hashPath": "harmonyx.2.7.0.nupkg.sha512"
     },
-    "Linkoid.Repo.Common.Build/0.2.1": {
+    "Linkoid.Repo.Common.Build/0.2.2": {
       "type": "package",
       "serviceable": true,
-      "sha512": "sha512-wa/rd5n1wWONJwK4/zqOqXLD6ztTTNK0J3hlPL6sHwLGjqCEkg5yX3T3zYxhGWuAh3wrH+oF6eTdwCOsfkXwYA==",
-      "path": "linkoid.repo.common.build/0.2.1",
-      "hashPath": "linkoid.repo.common.build.0.2.1.nupkg.sha512"
+      "sha512": "sha512-JAeMhh0dNZltcU/AnqIryqcREceoU1xrcaNgI0BhsX4/hOq0Fw6j9ShPTcsVhCOl9HqLIwEUrUFMzzrQ0u0rJA==",
+      "path": "linkoid.repo.common.build/0.2.2",
+      "hashPath": "linkoid.repo.common.build.0.2.2.nupkg.sha512"
     },
-    "Linkoid.Repo.Plugin.Build/0.2.1": {
+    "Linkoid.Repo.Plugin.Build/0.2.2": {
       "type": "package",
       "serviceable": true,
-      "sha512": "sha512-54Y4BQ+Qd3uHk1faU4+B9pGpJg9vAhm13P6CctlA5DXh+MqdOkIC/NlyRJ9/LD3k9RnEFulL74M9pgFt7brYhw==",
-      "path": "linkoid.repo.plugin.build/0.2.1",
-      "hashPath": "linkoid.repo.plugin.build.0.2.1.nupkg.sha512"
+      "sha512": "sha512-KYZXHqfUefvu8gJpw6QWw3gizy4O0LxG+C8Cw9l3f6DV4SCDxItcFoIyI6ICBZVaPtJaDYdggruupcphwv2H6w==",
+      "path": "linkoid.repo.plugin.build/0.2.2",
+      "hashPath": "linkoid.repo.plugin.build.0.2.2.nupkg.sha512"
     },
     "Microsoft.NETCore.Platforms/1.1.0": {
       "type": "package",

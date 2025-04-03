@@ -1,0 +1,10 @@
+{
+  "name": "MoreDifficultyREPO",
+  "version_number": "0.1.0",
+  "website_url": "https://github.com/SK0R3N/MoreDifficultyREPO",
+  "description": "A mod that adds different difficulties including a custom difficulty",
+  "dependencies": [
+	"nickklmao-MenuLib-1.0.4",
+    "nickklmao-REPOConfig-1.0.1"
+  ]
+}
