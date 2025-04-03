@@ -1,0 +1,11 @@
+C:\Users\skore\source\repos\DifficultyFeature\DifficultyFeature\obj\Debug\netstandard2.1\DifficultyFeature.csproj.AssemblyReference.cache
+C:\Users\skore\source\repos\DifficultyFeature\DifficultyFeature\obj\Debug\netstandard2.1\DifficultyFeature.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\skore\source\repos\DifficultyFeature\DifficultyFeature\obj\Debug\netstandard2.1\DifficultyFeature.AssemblyInfoInputs.cache
+C:\Users\skore\source\repos\DifficultyFeature\DifficultyFeature\obj\Debug\netstandard2.1\DifficultyFeature.AssemblyInfo.cs
+C:\Users\skore\source\repos\DifficultyFeature\DifficultyFeature\obj\Debug\netstandard2.1\DifficultyFeature.csproj.CoreCompileInputs.cache
+C:\Users\skore\source\repos\DifficultyFeature\DifficultyFeature\bin\Debug\netstandard2.1\DifficultyFeature.deps.json
+C:\Users\skore\source\repos\DifficultyFeature\DifficultyFeature\bin\Debug\netstandard2.1\DifficultyFeature.dll
+C:\Users\skore\source\repos\DifficultyFeature\DifficultyFeature\bin\Debug\netstandard2.1\MenuLib.dll
+C:\Users\skore\source\repos\DifficultyFeature\DifficultyFeature\bin\Debug\netstandard2.1\REPOConfig.dll
+C:\Users\skore\source\repos\DifficultyFeature\DifficultyFeature\obj\Debug\netstandard2.1\Difficul.9B37BD61.Up2Date
+C:\Users\skore\source\repos\DifficultyFeature\DifficultyFeature\obj\Debug\netstandard2.1\DifficultyFeature.dll
