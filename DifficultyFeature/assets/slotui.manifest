@@ -1,0 +1,36 @@
+ManifestFileVersion: 0
+CRC: 454774707
+Hashes:
+  AssetFileHash:
+    serializedVersion: 2
+    Hash: 12b571c71f2b9b35816e7f17440d6644
+  TypeTreeHash:
+    serializedVersion: 2
+    Hash: afce9a5c498e66dfa657771caee26973
+HashAppended: 0
+ClassTypes:
+- Class: 1
+  Script: {instanceID: 0}
+- Class: 28
+  Script: {instanceID: 0}
+- Class: 114
+  Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+- Class: 114
+  Script: {fileID: 11500000, guid: 32618b60a29655640acedb1ee5f42a93, type: 3}
+- Class: 115
+  Script: {instanceID: 0}
+- Class: 213
+  Script: {instanceID: 0}
+- Class: 222
+  Script: {instanceID: 0}
+- Class: 224
+  Script: {instanceID: 0}
+SerializeReferenceClassIdentifiers:
+- AssemblyName: UnityEngine.CoreModule
+  ClassName: UnityEngine.Events.PersistentCallGroup
+- AssemblyName: UnityEngine.UI
+  ClassName: UnityEngine.UI.MaskableGraphic/CullStateChangedEvent
+Assets:
+- Assets/ItemMod/SlotMachine.png
+- Assets/ItemMod/SlotMachineUI.prefab
+Dependencies: []

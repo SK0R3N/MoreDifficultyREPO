@@ -100,7 +100,7 @@ namespace MyMOD
                         else if (completed < 6)
                             RarityOverrideManager.Set(0.7f, 0.3f, 0f);
                         else
-                            RarityOverrideManager.Set(0.4f, 0.4f, 0.2f); ;
+                            RarityOverrideManager.Set(0.4f, 0.4f, 0.2f);
                         break;
                     case DifficultyLevel.Hardcore:
                         if (completed < 4)

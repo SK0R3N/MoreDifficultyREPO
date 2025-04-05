@@ -4,7 +4,11 @@ using HarmonyLib;
 using MyMOD;
 using Photon.Pun;
 using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.IO;
 using UnityEngine;
+using static DifficultyFeature.Event;
 
 namespace DifficultyFeature
 {
@@ -25,11 +29,16 @@ namespace DifficultyFeature
             // Prevent the plugin from being deleted
             this.gameObject.transform.parent = null;
             this.gameObject.hideFlags = HideFlags.HideAndDontSave;
+            SlotAssetLoader.LoadSlotAsset();
+            //SlotEventManager.RegisterEvent(new EnemyRainEvent());
+            SlotEventManager.RegisterEvent(new AlarmEvent());
 
             Patch();
 
             Logger.LogInfo($"{Info.Metadata.GUID} v{Info.Metadata.Version} has loaded!");
         }
+
+
 
         internal void Patch()
         {
@@ -41,6 +50,7 @@ namespace DifficultyFeature
         {
             Harmony?.UnpatchSelf();
         }
+        private HashSet<string> seenObjects = new();
 
         private void Update()
         {
@@ -55,9 +65,38 @@ namespace DifficultyFeature
                 }
             }
 
+
+            if (Input.GetKeyDown(KeyCode.F5))
+            {
+                var all = GameObject.FindObjectsOfType<GameObject>();
+                foreach (var obj in all)
+                {
+                    if (obj.scene.IsValid() && !seenObjects.Contains(obj.name))
+                    {
+                        if (obj.name.Contains("enemy", StringComparison.OrdinalIgnoreCase) || obj.name.Contains("head", StringComparison.OrdinalIgnoreCase))
+                        {
+                            Debug.Log($"[SpawnLogger] Spawned: {obj.name} | Active: {obj.activeInHierarchy}");
+                        }
+                        seenObjects.Add(obj.name);
+                    }
+                }
+            }
+
             if (Input.GetKeyDown(KeyCode.F6))
             {
-                LogAllGameObjectsInScene();
+                foreach (GameObject go in GameObject.FindObjectsOfType<GameObject>())
+                {
+                    if (go.activeInHierarchy)
+                    {
+                        Debug.Log($"[Debug] Active GameObject: {go.name} | Parent: {go.transform.GetComponentFastPath}");
+                    }
+                }
+            }
+
+            if (Input.GetKeyDown(KeyCode.F7))
+            {
+
+                SlotAssetLoader.ShowSlotMachineUI();
             }
         }
 

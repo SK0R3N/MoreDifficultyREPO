@@ -1,0 +1,17 @@
+ManifestFileVersion: 0
+CRC: 2170511123
+Hashes:
+  AssetFileHash:
+    serializedVersion: 2
+    Hash: acc982107b4e52a1002d1cc3b474213a
+  TypeTreeHash:
+    serializedVersion: 2
+    Hash: 9a2ca7bdbd1871f7131daf57de908e0c
+HashAppended: 0
+ClassTypes:
+- Class: 83
+  Script: {instanceID: 0}
+SerializeReferenceClassIdentifiers: []
+Assets:
+- Assets/ItemMod/alarm_event.mp3
+Dependencies: []
