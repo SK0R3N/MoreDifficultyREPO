@@ -8,6 +8,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
+using UnityEngine.Video;
 using static DifficultyFeature.Event;
 
 namespace DifficultyFeature
@@ -19,6 +20,9 @@ namespace DifficultyFeature
         internal new static ManualLogSource Logger => Instance._logger;
         private ManualLogSource _logger => base.Logger;
         internal Harmony? Harmony { get; set; }
+        internal static AssetBundleRequest request1 { get; set; }
+        internal static AssetBundleRequest request2 { get; set; }
+        internal static AssetBundleRequest request3 { get; set; }
 
         public static int DifficultyLevel { get; set; } = 1;
 
@@ -31,7 +35,13 @@ namespace DifficultyFeature
             this.gameObject.hideFlags = HideFlags.HideAndDontSave;
             SlotAssetLoader.LoadSlotAsset();
             //SlotEventManager.RegisterEvent(new EnemyRainEvent());
-            SlotEventManager.RegisterEvent(new AlarmEvent());
+            //SlotEventManager.RegisterEvent(new AlarmEvent());
+            SlotEventManager.RegisterEvent(new VideoMapEvent());
+            string bundlePath = Path.Combine(Paths.PluginPath, "SK0R3N-DifficultyFeature", "assets", "video");
+            AssetBundle bundle = AssetBundle.LoadFromFile(bundlePath);
+            request1 = bundle.LoadAssetAsync<VideoClip>("Clash");
+            request2 = bundle.LoadAssetAsync<VideoClip>("Undertale");
+            request3 = bundle.LoadAssetAsync<VideoClip>("minecraft");
 
             Patch();
 
