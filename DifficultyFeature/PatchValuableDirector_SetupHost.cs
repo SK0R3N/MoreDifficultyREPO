@@ -129,7 +129,7 @@ namespace MyMOD
         public static void Prefix(ShopManager __instance)
         {
             float multiplier = DifficultyManager3.GetShopPriceMultiplier(DifficultyManager.CurrentDifficulty);
-            __instance.itemValueMultiplier *= multiplier;
+            __instance.itemValueMultiplier = multiplier * 4;
 
             Log.LogInfo($"[Difficulty] Shop price multiplier applied: x{multiplier}");
         }

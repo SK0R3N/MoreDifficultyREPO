@@ -3,6 +3,7 @@ using HarmonyLib;
 using Photon.Pun;
 using REPOLib.Extensions;
 using REPOLib.Modules;
+using SingularityGroup.HotReload;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -14,9 +15,11 @@ using System.Xml.Linq;
 using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.InputSystem;
 using UnityEngine.Rendering;
 using UnityEngine.Video;
 using static DifficultyFeature.Event;
+using static MonoMod.Cil.RuntimeILReferenceBag.FastDelegateInvokers;
 
 namespace DifficultyFeature
 {
@@ -59,6 +62,53 @@ namespace DifficultyFeature
 
             public void Execute()
             {
+                MapLockController.LockForSeconds(60f); 
+            }
+        }
+
+        public static class MapLockController
+        {
+            private static Coroutine lockRoutine;
+            private static PlayerAvatar player;
+            private static InputKey originalKey = InputKey.Map;
+
+            public static void LockForSeconds(float seconds)
+            {
+                player = PlayerAvatar.instance;
+                if (player == null)
+                {
+                    Debug.LogError("[MapLockController] PlayerAvatar is null.");
+                    return;
+                }
+
+                if (lockRoutine != null)
+                {
+                    player.StopCoroutine(lockRoutine);
+                }
+
+                lockRoutine = player.StartCoroutine(LockRoutine(seconds));
+            }
+
+            private static IEnumerator LockRoutine(float seconds)
+            {
+                Debug.Log("[MapLockController] Map disabled.");
+                var action = InputManager.instance.GetAction(InputKey.Map);
+                string bindingPath = action.bindings[0].overridePath;
+
+                Debug.Log($"[MapLockController]  {bindingPath} ");
+                while (seconds > 0f)
+                {
+                    if (player == null) yield break;
+
+                    // Force la map à rester fermée
+                    
+                    InputManager.instance.Rebind(InputKey.Map, "<Keyboard>/pause");
+                    seconds -= Time.deltaTime;
+                    yield return null;
+                }
+                InputManager.instance.Rebind(InputKey.Map, bindingPath);
+
+                Debug.Log("[MapLockController] Map re-enabled.");
             }
         }
 
@@ -131,9 +181,8 @@ namespace DifficultyFeature
                         return;
                     }
 
-                    InitVideoPlayer(videoClip, display, map); // ta fonction pour setup VideoPlayer
+                    InitVideoPlayer(videoClip, display, map); 
                 };
-                // Crée un render texture + VideoPlayer
 
             }
 
@@ -187,9 +236,6 @@ namespace DifficultyFeature
             }
         }
 
-       
-
-
         public class AlarmEvent : ISlotEvent
         {
             public string EventName => "Alarm";
@@ -217,7 +263,6 @@ namespace DifficultyFeature
                 photonView.RPC("TriggerAlarmRPC", RpcTarget.All, photonView.ViewID, 5f);
             }
         }
-
 
         public class AlarmEffectController : MonoBehaviour
         {
