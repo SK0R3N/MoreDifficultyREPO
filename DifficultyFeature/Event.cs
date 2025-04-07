@@ -4,6 +4,7 @@ using Photon.Pun;
 using REPOLib.Extensions;
 using REPOLib.Modules;
 using SingularityGroup.HotReload;
+using Steamworks;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -17,6 +18,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 using UnityEngine.Rendering;
+using UnityEngine.UI;
 using UnityEngine.Video;
 using static DifficultyFeature.Event;
 using static MonoMod.Cil.RuntimeILReferenceBag.FastDelegateInvokers;
@@ -25,7 +27,7 @@ namespace DifficultyFeature
 {
     internal class Event
     {
-        public class EnemyRainEvent : ISlotEvent
+        public class EnemyDuckEvent : ISlotEvent
         {
             public string EventName => "EnemyRain";
             public string IconName => "icon_enemy_rain";
@@ -37,19 +39,251 @@ namespace DifficultyFeature
                 var player = PlayerController.instance;
                 if (player == null) return;
 
-                Vector3 spawnPos = player.transform.position + player.transform.forward * 5f;
+                string enemyName = "Duck";
 
-                Debug.Log("[SlotEvent] Spawning enemy in front of player.");
-
-                string name = "Headman";
-
-                if (!EnemyDirector.instance.TryGetEnemyThatContainsName(name, out EnemySetup enemySetup))
+                if (!EnemyDirector.instance.TryGetEnemyThatContainsName(enemyName, out EnemySetup enemySetup))
                 {
-                    Debug.Log("[SlotEvent] EnemyNotfound");
+                    Debug.Log("[EnemyRainEvent] Enemy not found: " + enemyName);
                     return;
                 }
 
-                Enemies.SpawnEnemy(enemySetup, spawnPos, Quaternion.identity, spawnDespawned: false);
+                int count = 15;
+                float radius = 10f;
+                Vector3 center = player.transform.position;
+
+                for (int i = 0; i < count; i++)
+                {
+                    float angle = i * Mathf.PI * 2f / count;
+                    Vector3 offset = new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * radius;
+                    Vector3 spawnPos = center + offset;
+
+
+                    spawnPos.y += 2f;
+
+                    Debug.Log($"[EnemyRainEvent] Spawning enemy #{i + 1} at {spawnPos}");
+                    Enemies.SpawnEnemy(enemySetup, spawnPos, Quaternion.identity, spawnDespawned: false);
+                }
+            }
+        }
+
+        public class MarioStarEvent : ISlotEvent
+        {
+            public string EventName => "MarioStar";
+            public string IconName => "icon_enemy_rain";
+
+            public string Asset => "TestAsset";
+            public AssetBundle AssetBundle { get; set; }
+
+            public void Execute()
+            {
+                var player = PlayerController.instance;
+                if (player == null) return;
+
+                string bundlePath = Path.Combine(Paths.PluginPath, "SK0R3N-DifficultyFeature", "assets", "Mario");
+                Debug.Log($"[AlarmEffectController] Loading asset bundle from: {bundlePath}");
+
+                
+                if (AssetBundle == null)
+                {
+                    AssetBundle = AssetBundle.LoadFromFile(bundlePath);
+                }
+
+                AudioClip starClip = AssetBundle.LoadAsset<AudioClip>("videoplayback");
+                if (starClip == null)
+                {
+                    Debug.LogError("[AlarmEffectController] Failed to load Star.");
+                    return;
+                }
+
+                PlayerAvatar avatar = PlayerAvatar.instance;
+                avatar.StartCoroutine(ApplyMarioStarEffect(avatar, starClip));
+            }
+
+            private IEnumerator ApplyMarioStarEffect(PlayerAvatar avatar, AudioClip clip)
+            {
+                float duration = clip.length;
+                Debug.Log($"[MarioStarEvent] Applying star power for {duration} seconds.");
+
+                // 1. HP invincible
+
+                PlayerController t = PlayerController.instance;
+                float originalMaxHealth = avatar.playerHealth.maxHealth;
+                float originalHealth = avatar.playerHealth.health;
+                float originalspeed = t.EnergySprintDrain;
+                t.EnergySprintDrain = 0;
+                avatar.playerHealth.maxHealth = 999;
+                avatar.playerHealth.health = 999;
+
+                Debug.Log("[MarioStarEvent] Creating rainbow overlay...");
+
+                Material rainbowMat = AssetBundle.LoadAsset<Material>("MarioStar");
+                if (rainbowMat == null)
+                {
+                    Debug.LogError("[MarioStarEvent] Material MarioStar introuvable !");
+                    yield break;
+                }
+                else
+                {
+                    Debug.Log("[MarioStarEvent] Material chargé avec succès.");
+                }
+                GameObject overlayPrefab = AssetBundle.LoadAsset<GameObject>("RainbowOverlay");
+                GameObject overlay = GameObject.Instantiate(overlayPrefab);
+                HUDCanvas h = HUDCanvas.instance;
+
+                overlay.transform.SetParent(h.transform, false); // si tu veux le mettre dans HUD Canvas
+                overlay.SetActive(true);
+                Debug.Log("[MarioStarEvent] RainbowOverlay activé.");
+
+                Debug.Log("[MarioStarEvent] Overlay UI créé et affiché.");
+
+                // 2. Audio local (dans les oreilles du joueur)
+                AudioSource localAudio = avatar.gameObject.AddComponent<AudioSource>();
+                localAudio.clip = clip;
+                localAudio.spatialBlend = 0f; // son 2D dans les oreilles
+                localAudio.loop = false;
+                localAudio.Play();
+
+                // 3. Audio global (réplication réseau)
+                if (PhotonNetwork.InRoom)
+                {
+                    PhotonView photonView = avatar.GetComponent<PhotonView>();
+                    photonView.RPC("RPC_PlayMarioStarSound", RpcTarget.Others, avatar.transform.position);
+                }
+
+                // 4. Activer l'effet de "kill au contact"
+                var marioEffect = avatar.gameObject.AddComponent<MarioStarPower>();
+                marioEffect.duration = duration;
+
+                yield return new WaitForSeconds(duration);
+
+                // 5. Fin de l’effet
+                if (overlay != null)
+                {
+                    overlay.SetActive(false);
+                    Debug.Log("[MarioStarEvent] RainbowOverlay désactivé.");
+                }
+                t.EnergySprintDrain = originalspeed;
+                avatar.playerHealth.health = (int)originalHealth;
+                avatar.playerHealth.maxHealth = (int)originalMaxHealth;
+                UnityEngine.Object.Destroy(localAudio);
+                UnityEngine.Object.Destroy(marioEffect);
+                Debug.Log("[MarioStarEvent] Star effect ended.");
+            }
+
+            [PunRPC]
+            public void RPC_PlayMarioStarSound(Vector3 position, PhotonMessageInfo info)
+            {
+                // Joué pour les autres joueurs
+                string bundlePath = Path.Combine(Paths.PluginPath, "SK0R3N-DifficultyFeature", "assets", "Mario");
+                var bundle = AssetBundle.LoadFromFile(bundlePath);
+                if (bundle == null) return;
+
+                AudioClip starClip = bundle.LoadAsset<AudioClip>("Star");
+                if (starClip == null) return;
+
+                GameObject obj = new GameObject("StarSoundRemote");
+                obj.transform.position = position;
+
+                AudioSource audio = obj.AddComponent<AudioSource>();
+                audio.clip = starClip;
+                audio.spatialBlend = 1f; // 3D spatial
+                audio.maxDistance = 50f;
+                audio.Play();
+
+                UnityEngine.Object.Destroy(obj, starClip.length + 1f);
+            }
+
+           
+        }
+
+        public class MarioStarPower : MonoBehaviour
+        {
+            public float duration = 5f;
+            private Collider triggerCollider;
+
+            private void Start()
+            {
+                Debug.Log("[MarioStarPower] Init...");
+
+                // Ajoute un SphereCollider si aucun
+                triggerCollider = GetComponent<Collider>();
+                if (triggerCollider == null)
+                {
+                    Debug.Log("[MarioStarPower] Aucun collider trouvé. Ajout d’un SphereCollider.");
+                    triggerCollider = gameObject.AddComponent<SphereCollider>();
+                    ((SphereCollider)triggerCollider).radius = 1.5f;
+                }
+                else
+                {
+                    Debug.Log($"[MarioStarPower] Collider déjà présent: {triggerCollider.GetType().Name}");
+                }
+                GameObject overlay = GameObject.Find("RainbowOverlay");
+                foreach (Transform t in GameObject.FindObjectsOfType<Transform>(true))
+                {
+                    if (t.name == "RainbowOverlay")
+                        overlay = t.gameObject;
+                }
+
+                triggerCollider.isTrigger = true;
+
+                // Vérifie/ajoute un Rigidbody (obligatoire pour que OnTriggerEnter fonctionne)
+                if (GetComponent<Rigidbody>() == null)
+                {
+                    Debug.Log("[MarioStarPower] Aucun Rigidbody trouvé. Ajout d’un Rigidbody kinematic.");
+                    var rb = gameObject.AddComponent<Rigidbody>();
+                    rb.isKinematic = true;
+                    rb.useGravity = false;
+                }
+                else
+                {
+                    Debug.Log("[MarioStarPower] Rigidbody déjà présent.");
+                }
+            }
+
+            private Enemy FindEnemyRoot(Transform current)
+            {
+                while (current != null)
+                {
+                    // Si on tombe directement sur un Enemy, parfait
+                    Enemy direct = current.GetComponent<Enemy>();
+                    if (direct != null)
+                        return direct;
+
+                    // Sinon on check s'il y a un EnemyParent, et on va chercher .Enemy
+                    EnemyParent parent = current.GetComponent<EnemyParent>();
+                    if (parent != null && parent.Enemy != null)
+                    {
+                        Debug.Log($"[MarioStarPower] Enemy trouvé via EnemyParent → {parent.Enemy.name}");
+                        return parent.Enemy;
+                    }
+
+                    current = current.parent;
+                }
+
+                return null;
+            }
+
+            private void OnTriggerEnter(Collider other)
+            {
+
+                Enemy enemy = FindEnemyRoot(other.transform);
+                if (enemy != null)
+                {
+                    Debug.Log($"[MarioStarPower] {enemy.name} est un ennemi. Tentative de dégâts...");
+                    if (enemy.HasHealth && enemy.Health != null && !enemy.Health.dead)
+                    {
+                        Debug.Log($"[MarioStarPower] Ennemi {enemy.name} valide. Application des 999 dégâts.");
+                        enemy.Health.Hurt(999, Vector3.zero);
+                    }
+                    else
+                    {
+                        Debug.LogWarning($"[MarioStarPower] {enemy.name} n’a pas de composant santé valide.");
+                    }
+                }
+                else
+                {
+                    Debug.Log($"[MarioStarPower] {other.name} n’est pas un ennemi (Enemy introuvable dans la hiérarchie).");
+                }
             }
         }
 

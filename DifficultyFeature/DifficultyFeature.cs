@@ -34,10 +34,11 @@ namespace DifficultyFeature
             this.gameObject.transform.parent = null;
             this.gameObject.hideFlags = HideFlags.HideAndDontSave;
             SlotAssetLoader.LoadSlotAsset();
-            //SlotEventManager.RegisterEvent(new EnemyRainEvent());
+            //SlotEventManager.RegisterEvent(new EnemyDuckEvent());
             //SlotEventManager.RegisterEvent(new AlarmEvent());
             //SlotEventManager.RegisterEvent(new VideoMapEvent());
-            SlotEventManager.RegisterEvent(new NoMinimap());
+            //SlotEventManager.RegisterEvent(new NoMinimap());
+            //SlotEventManager.RegisterEvent(new MarioStarEvent());
             string bundlePath = Path.Combine(Paths.PluginPath, "SK0R3N-DifficultyFeature", "assets", "video");
             AssetBundle bundle = AssetBundle.LoadFromFile(bundlePath);
             request1 = bundle.LoadAssetAsync<VideoClip>("Clash");
@@ -79,18 +80,7 @@ namespace DifficultyFeature
 
             if (Input.GetKeyDown(KeyCode.F5))
             {
-                var all = GameObject.FindObjectsOfType<GameObject>();
-                foreach (var obj in all)
-                {
-                    if (obj.scene.IsValid() && !seenObjects.Contains(obj.name))
-                    {
-                        if (obj.name.Contains("enemy", StringComparison.OrdinalIgnoreCase) || obj.name.Contains("head", StringComparison.OrdinalIgnoreCase))
-                        {
-                            Debug.Log($"[SpawnLogger] Spawned: {obj.name} | Active: {obj.activeInHierarchy}");
-                        }
-                        seenObjects.Add(obj.name);
-                    }
-                }
+                ListHUDObjects();
             }
 
             if (Input.GetKeyDown(KeyCode.F6))
@@ -108,6 +98,30 @@ namespace DifficultyFeature
             {
 
                 SlotAssetLoader.ShowSlotMachineUI();
+            }
+        }
+
+        public static void ListHUDObjects()
+        {
+            GameObject hudCanvas = GameObject.Find("HUD Canvas");
+            if (hudCanvas == null)
+            {
+                Debug.LogError("[HUD Explorer] HUD Canvas introuvable !");
+                return;
+            }
+
+            Debug.Log("[HUD Explorer] --- Objets enfants du HUD Canvas ---");
+            ListChildrenRecursive(hudCanvas.transform, 0);
+        }
+
+        private static void ListChildrenRecursive(Transform parent, int indent)
+        {
+            string indentStr = new string(' ', indent * 2);
+            Debug.Log($"{indentStr}- {parent.name}");
+
+            foreach (Transform child in parent)
+            {
+                ListChildrenRecursive(child, indent + 1);
             }
         }
 
