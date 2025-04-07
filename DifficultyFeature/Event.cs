@@ -1,10 +1,12 @@
 ﻿using BepInEx;
 using HarmonyLib;
 using Photon.Pun;
+using Photon.Voice;
 using REPOLib.Extensions;
 using REPOLib.Modules;
 using SingularityGroup.HotReload;
 using Steamworks;
+using Steamworks.Ugc;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -19,6 +21,7 @@ using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 using UnityEngine.Rendering;
 using UnityEngine.UI;
+using UnityEngine.UIElements;
 using UnityEngine.Video;
 using static DifficultyFeature.Event;
 using static MonoMod.Cil.RuntimeILReferenceBag.FastDelegateInvokers;
@@ -27,6 +30,83 @@ namespace DifficultyFeature
 {
     internal class Event
     {
+        public class GoldenGunEvent : ISlotEvent
+        {
+            public string EventName => "EnemyRain";
+            public string IconName => "icon_enemy_rain";
+
+            public string Asset => "TestAsset";
+
+            public void Execute()
+            {
+                var player = PlayerController.instance;
+                if (player == null) return;
+                object[] instantiationData = new object[] { true }; // true = GoldenGun
+                GameObject gunInstance2 = new GameObject();
+                try
+                {
+                    gunInstance2 = PhotonNetwork.Instantiate("items/Golden_Gun", player.transform.position + player.transform.forward, Quaternion.identity);
+                }
+                catch (Exception e)
+                {
+                    Debug.LogException(e);
+
+                }
+
+                if (gunInstance2 == null)
+                {
+                    Debug.LogError("[GoldenGun] PhotonNetwork.Instantiate a retourné NULL !");
+                }
+                else
+                {
+                    Debug.Log("[GoldenGun] Gun instancié, name: " + gunInstance2.name);
+                    foreach (var view in gunInstance2.GetComponentsInChildren<PhotonView>())
+                        Debug.Log($"[GoldenGun] PhotonView: {view.name}, ViewID: {view.ViewID}, IsMine: {view.IsMine}");
+                }
+            }
+
+        }
+
+        [HarmonyPatch(typeof(ItemGunBullet), nameof(ItemGunBullet.ActivateAll))]
+        public class GoldenGunBulletPatch
+        {
+            static void Postfix(ItemGunBullet __instance)
+            {
+                if (__instance.hurtCollider == null)
+                    return;
+
+                if (GoldenGunLinker.GunQueue.Count > 0)
+                {
+                    var gun = GoldenGunLinker.GunQueue.Dequeue();
+
+                    if (gun != null && gun.name.ToLower().Contains("golden"))
+                    {
+                        __instance.hurtCollider.enemyDamage = 999;
+                        Debug.Log("[GoldenGun] Dégâts boostés à 999 !");
+                    }
+                }
+                else
+                {
+                    Debug.LogWarning("[GoldenGun] Aucun gun lié trouvé dans la file !");
+                }
+            }
+        }
+
+        public static class GoldenGunLinker
+        {
+            public static Queue<ItemGun> GunQueue = new Queue<ItemGun>();
+        }
+
+        [HarmonyPatch(typeof(ItemGun), nameof(ItemGun.ShootBulletRPC))]
+        public class GoldenGun_ShootBulletPatch
+        {
+            static void Prefix(ItemGun __instance)
+            {
+                GoldenGunLinker.GunQueue.Enqueue(__instance);
+            }
+        }
+
+
         public class EnemyDuckEvent : ISlotEvent
         {
             public string EventName => "EnemyRain";
@@ -662,6 +742,7 @@ namespace DifficultyFeature
                 Trigger(avatar, duration);
             }
         }
+
 
     }
 
