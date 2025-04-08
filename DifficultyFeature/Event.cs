@@ -12,6 +12,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
+using System.Reflection.Emit;
 using System.Security.Claims;
 using System.Text;
 using System.Xml.Linq;
@@ -25,6 +26,7 @@ using UnityEngine.UIElements;
 using UnityEngine.Video;
 using static DifficultyFeature.Event;
 using static MonoMod.Cil.RuntimeILReferenceBag.FastDelegateInvokers;
+using static UnityEngine.ParticleSystem;
 
 namespace DifficultyFeature
 {
@@ -67,6 +69,37 @@ namespace DifficultyFeature
 
         }
 
+        public class RevealMapEvent : ISlotEvent
+        {
+            public string EventName => "Reveal Map";
+            public string IconName => "reveal_icon";
+            public string Asset => "TestAsset";
+
+            public void Execute()
+            {
+                Debug.Log("[RevealMapEvent] Début du reveal");
+
+                int revealed = 0;
+                var volumes = GameObject.FindObjectsOfType<RoomVolume>();
+                Debug.Log($"[RevealMapEvent] {volumes.Length} RoomVolume trouvés.");
+
+                foreach (var room in volumes)
+                {
+
+                    room.SetExplored();
+                }
+
+                foreach (var valuable in GameObject.FindObjectsOfType<ValuableObject>())
+                {
+                    Map.Instance.AddValuable(valuable);
+                }
+
+                Debug.Log($"[RevealMapEvent] Carte révélée : {revealed} objets affichés.");
+            }
+
+        }
+
+
         [HarmonyPatch(typeof(ItemGunBullet), nameof(ItemGunBullet.ActivateAll))]
         public class GoldenGunBulletPatch
         {
@@ -105,7 +138,6 @@ namespace DifficultyFeature
                 GoldenGunLinker.GunQueue.Enqueue(__instance);
             }
         }
-
 
         public class EnemyDuckEvent : ISlotEvent
         {

@@ -40,7 +40,9 @@ namespace DifficultyFeature
             this.gameObject.hideFlags = HideFlags.HideAndDontSave;
             SlotAssetLoader.LoadSlotAsset();
 
-            SlotEventManager.RegisterEvent(new GoldenGunEvent());
+            //SlotEventManager.RegisterEvent(new GoldenGunEvent());
+            SlotEventManager.RegisterEvent(new RevealMapEvent());
+            
 
             string bundlePath = Path.Combine(Paths.PluginPath, "SK0R3N-DifficultyFeature", "assets", "video");
             AssetBundle bundle = AssetBundle.LoadFromFile(bundlePath);
