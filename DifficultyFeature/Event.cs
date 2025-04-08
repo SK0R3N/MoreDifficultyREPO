@@ -11,6 +11,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Security.Claims;
@@ -24,14 +25,223 @@ using UnityEngine.Rendering;
 using UnityEngine.UI;
 using UnityEngine.UIElements;
 using UnityEngine.Video;
-using static DifficultyFeature.Event;
-using static MonoMod.Cil.RuntimeILReferenceBag.FastDelegateInvokers;
-using static UnityEngine.ParticleSystem;
 
 namespace DifficultyFeature
 {
     internal class Event
     {
+        public class SurviveHorror : ISlotEvent
+        {
+            public string EventName => "SurviveHorrror";
+            public string IconName => "icon_timeslow";
+            public string Asset => "TestAsset";
+
+            public void Execute()
+            {
+                var player = PlayerController.instance;
+                if (player == null) return;
+
+                int count = 15;
+                float radius = 10f;
+                Vector3 center = player.transform.position;
+                List<EnemyParent> spawnedEnemies = new();
+
+                for (int i = 0; i < count; i++)
+                {
+                    string enemyName = "";
+                    int difficulty = UnityEngine.Random.Range(0, 3); // 0 → Easy, 1 → Med, 2 → Hard
+                    int t = 0;
+
+                    switch (difficulty)
+                    {
+                        case 0:
+                            t = EnemyDirector.instance.enemiesDifficulty1.Count;
+                            enemyName = EnemyDirector.instance.enemiesDifficulty1[UnityEngine.Random.Range(0, t)].name;
+                            break;
+                        case 1:
+                            t = EnemyDirector.instance.enemiesDifficulty2.Count;
+                            enemyName = EnemyDirector.instance.enemiesDifficulty2[UnityEngine.Random.Range(0, t)].name;
+                            break;
+                        case 2:
+                            t = EnemyDirector.instance.enemiesDifficulty3.Count;
+                            enemyName = EnemyDirector.instance.enemiesDifficulty3[UnityEngine.Random.Range(0, t)].name;
+                            break;
+                    }
+
+                    if (!enemyName.ToLower().Contains("gnome"))
+                    {
+                        if (!EnemyDirector.instance.TryGetEnemyThatContainsName(enemyName, out EnemySetup enemySetup))
+                        {
+                            Debug.LogWarning($"[EnemyRainEvent] Enemy not found: {enemyName}");
+                            continue;
+                        }
+
+                        float angle = i * Mathf.PI * 2f / count;
+                        Vector3 offset = new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * radius;
+                        Vector3 spawnPos = center + offset + Vector3.up;
+
+                        List<EnemyParent> enemy = Enemies.SpawnEnemy(enemySetup, spawnPos, Quaternion.identity, spawnDespawned: false);
+                        spawnedEnemies.Add(enemy.First());
+
+                        Debug.Log($"[EnemyRainEvent] Spawned {enemy.First().name} at {spawnPos}");
+                    }
+                    else
+                    {
+                        i--;
+                    }
+                }
+
+                // Lance la suppression après 30 secondes
+                Debug.Log(spawnedEnemies.ToList());
+                foreach (var enemy in spawnedEnemies)
+                {
+                    Debug.Log($"[EnemyRainEvent] Destroyed {enemy.name}");
+                }
+                PlayerController.instance.StartCoroutine(DestroyEnemiesAfterDelay(spawnedEnemies, 30f));
+            }
+
+            private IEnumerator DestroyEnemiesAfterDelay(List<EnemyParent> enemies, float delay)
+            {
+                yield return new WaitForSeconds(delay);
+                
+
+                foreach (var enemy in enemies)
+                {
+                    if (enemy != null)
+                    {
+                       PhotonNetwork.Destroy(enemy.GameObject());
+                       Debug.Log($"[EnemyRainEvent] Destroyed {enemy.name}");
+
+                    }
+                }
+            }
+        }
+
+        public class TimeSlowEvent : ISlotEvent
+        {
+            public string EventName => "Time Slow";
+            public string IconName => "icon_timeslow";
+            public string Asset => "TestAsset";
+
+            public void Execute()
+            {
+                var player = PlayerController.instance;
+                if (player == null) return;
+
+                PhotonView view = player.GetComponent<PhotonView>();
+
+                if (player.GetComponent<TimeSlowEffectController>() == null)
+                {
+                    player.gameObject.AddComponent<TimeSlowEffectController>();
+                }
+
+                if (view != null && view.IsMine)
+                {
+                    Debug.Log("Start Event");
+                    view.RPC("ApplyTimeSlowEffect", RpcTarget.All, view.ViewID);
+                }
+            }
+
+        }
+
+        public class TimeSlowEffectController : MonoBehaviourPun
+        {
+            private float duration = 30f;
+            private bool isActive = false;
+
+            public void Trigger()
+            {
+                if (isActive) return;
+                isActive = true;
+
+                if (photonView.IsMine)
+                {
+                    Debug.Log("Start Event Again");
+                    ApplySlow();
+                    StartCoroutine(RemoveEffectAfterTime());
+                }
+            }
+
+            [PunRPC]
+            public void ApplyTimeSlowEffect(int viewID)
+            {
+                PhotonView view = PhotonView.Find(viewID);
+                if (view == null) return;
+
+                Debug.Log("Start Event real");
+                var controller = view.GetComponent<TimeSlowEffectController>();
+                if (controller == null)
+                    controller = view.gameObject.AddComponent<TimeSlowEffectController>();
+
+                controller.Trigger();
+            }
+
+            private void ApplySlow()
+            {
+                var player = PlayerController.instance;
+                if (player == null) return;
+
+                player.OverrideSpeed(0.5f);
+                player.OverrideLookSpeed(0.5f, 2f, 1f);
+                player.OverrideAnimationSpeed(0.2f, 1f, 2f);
+                player.OverrideTimeScale(0.1f);
+            }
+
+            private void ResetToDefault()
+            {
+                var player = PlayerController.instance;
+                if (player == null) return;
+
+                player.OverrideSpeed(1f);                // Vitesse normale
+                player.OverrideLookSpeed(1f, 1f, 1f);     // Rotation standard
+                player.OverrideAnimationSpeed(1f, 1f, 1f); // Animations
+                player.OverrideTimeScale(1f);             // Temps normal
+            }
+
+            private IEnumerator RemoveEffectAfterTime()
+            {
+                yield return new WaitForSeconds(duration);
+                ResetToDefault();
+                isActive = false;
+                Destroy(this);
+            }
+        }
+
+        public class RandomTeleportEvent : ISlotEvent
+        {
+            public string EventName => "Random TP";
+            public string IconName => "icon_random_tp";
+            public string Asset => "TestAsset";
+
+            public void Execute()
+            {
+                var player = PlayerController.instance;
+                if (player == null)
+                {
+                    Debug.LogError("[RandomTP] Joueur introuvable !");
+                    return;
+                }
+
+                // Liste des modules existants
+                var modules = GameObject.FindObjectsOfType<Module>();
+                if (modules.Length  == 0)
+                {
+                    Debug.LogError("[RandomTP] Aucun module trouvé !");
+                    return;
+                }
+
+                // On prend une salle aléatoire
+                var randomModule = modules[UnityEngine.Random.Range(0, modules.Length)];
+
+                // On essaie de trouver un point de positionnement safe dans la salle
+                var targetPosition = randomModule.transform.position + Vector3.up * 1.5f;
+
+                // Appliquer le TP
+                player.transform.position = targetPosition;
+                Debug.Log($"[RandomTP] Joueur téléporté dans {randomModule.name}");
+            }
+        }
+
         public class GoldenGunEvent : ISlotEvent
         {
             public string EventName => "EnemyRain";
@@ -98,7 +308,6 @@ namespace DifficultyFeature
             }
 
         }
-
 
         [HarmonyPatch(typeof(ItemGunBullet), nameof(ItemGunBullet.ActivateAll))]
         public class GoldenGunBulletPatch

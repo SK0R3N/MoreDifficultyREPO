@@ -41,9 +41,10 @@ namespace DifficultyFeature
             SlotAssetLoader.LoadSlotAsset();
 
             //SlotEventManager.RegisterEvent(new GoldenGunEvent());
-            SlotEventManager.RegisterEvent(new RevealMapEvent());
-            
-
+            //SlotEventManager.RegisterEvent(new RevealMapEvent());
+            //SlotEventManager.RegisterEvent(new RandomTeleportEvent());
+            //SlotEventManager.RegisterEvent(new TimeSlowEvent());
+            SlotEventManager.RegisterEvent(new SurviveHorror());
             string bundlePath = Path.Combine(Paths.PluginPath, "SK0R3N-DifficultyFeature", "assets", "video");
             AssetBundle bundle = AssetBundle.LoadFromFile(bundlePath);
             request1 = bundle.LoadAssetAsync<VideoClip>("Clash");
