@@ -1,5 +1,6 @@
 ﻿using BepInEx;
 using BepInEx.Logging;
+using ExitGames.Client.Photon;
 using HarmonyLib;
 using MyMOD;
 using Photon.Pun;
@@ -28,8 +29,21 @@ namespace DifficultyFeature
         internal static AssetBundleRequest request2 { get; set; }
         internal static AssetBundleRequest request3 { get; set; }
         private static CustomPrefabPool _customPool;
+        private HashSet<string> seenObjects = new();
+        private bool subscribed = false;
+
 
         public static int DifficultyLevel { get; set; } = 1;
+
+        private void Start()
+        {
+            if (!subscribed && PhotonNetwork.NetworkingClient != null)
+            {
+                PhotonNetwork.NetworkingClient.EventReceived += OnEvent;
+                subscribed = true;
+                Debug.Log("[WalkiePlugin] Event listener registered from Start()");
+            }
+        }
 
         private void Awake()
         {
@@ -44,7 +58,8 @@ namespace DifficultyFeature
             //SlotEventManager.RegisterEvent(new RevealMapEvent());
             //SlotEventManager.RegisterEvent(new RandomTeleportEvent());
             //SlotEventManager.RegisterEvent(new TimeSlowEvent());
-            SlotEventManager.RegisterEvent(new SurviveHorror());
+            //SlotEventManager.RegisterEvent(new SurviveHorror());
+            SlotEventManager.RegisterEvent(new BetterWalkieTakkie());
             string bundlePath = Path.Combine(Paths.PluginPath, "SK0R3N-DifficultyFeature", "assets", "video");
             AssetBundle bundle = AssetBundle.LoadFromFile(bundlePath);
             request1 = bundle.LoadAssetAsync<VideoClip>("Clash");
@@ -64,32 +79,6 @@ namespace DifficultyFeature
             Logger.LogInfo($"{Info.Metadata.GUID} v{Info.Metadata.Version} has loaded!");
         }
 
-        private IEnumerator RegisterGoldenGunWhenReady(GameObject goldenGunPrefab)
-        {
-            while (!(PhotonNetwork.PrefabPool.GetType().Name.Contains("CustomPrefabPool")))
-            {
-                Debug.Log("[GoldenGun] Waiting for CustomPrefabPool...");
-                yield return null;
-            }
-
-            // Enregistrement du prefab dans CustomPrefabPool
-            var registerMethod = PhotonNetwork.PrefabPool.GetType().GetMethod("RegisterPrefab");
-            if (registerMethod != null)
-            {
-                registerMethod.Invoke(PhotonNetwork.PrefabPool, new object[] { "Items/Golden Gun", goldenGunPrefab });
-                Debug.Log("[GoldenGun] Prefab enregistré avec succès !");
-            }
-            else
-            {
-                Debug.LogError("[GoldenGun] Méthode RegisterPrefab introuvable !");
-            }
-
-            // Enregistrement de l'item dans les systèmes
-
-            Debug.Log("[GoldenGun] Item enregistré avec succès !");
-        }
-
-
         internal void Patch()
         {
             Harmony ??= new Harmony(Info.Metadata.GUID);
@@ -100,10 +89,10 @@ namespace DifficultyFeature
         {
             Harmony?.UnpatchSelf();
         }
-        private HashSet<string> seenObjects = new();
 
         private void Update()
         {
+            
             GameObject lobbyPage = GameObject.Find("Menu Page Lobby(Clone)");
             if (lobbyPage != null && PhotonNetwork.IsMasterClient)
             {
@@ -132,12 +121,273 @@ namespace DifficultyFeature
                 }
             }
 
+
+            PlayerAvatar playerAvatar = PlayerAvatar.instance;
+            if (playerAvatar.mapToolController.Active && Input.GetKeyDown(KeyCode.RightArrow))
+            {
+                if (BetterWalkieTakkie.instance != null)
+                {
+                    //DisableAllMapGeometry();
+                    BetterWalkieTakkie.instance.ToggleWalkie(true);
+                }
+
+            }
+            if (playerAvatar.mapToolController.Active && Input.GetKeyDown(KeyCode.LeftArrow))
+            {
+                if (BetterWalkieTakkie.instance != null)
+                {
+                    BetterWalkieTakkie.instance.ToggleWalkie(false);
+                    //ActivateAllMapGeometry();
+                }
+            }
+
             if (Input.GetKeyDown(KeyCode.F7))
             {
-
-                SlotAssetLoader.ShowSlotMachineUI();
+                //SlotAssetLoader.ShowSlotMachineUI();
+                BetterWalkieTakkie t = new BetterWalkieTakkie();
+                t.Execute();
             }
         }
+
+        private void OnDestroy()
+        {
+            if (subscribed && PhotonNetwork.NetworkingClient != null)
+            {
+                PhotonNetwork.NetworkingClient.EventReceived -= OnEvent;
+                Debug.Log("[WalkiePlugin] Event listener unregistered from OnDestroy()");
+            }
+        }
+
+        //Plugin Methode
+        public void OnEvent(EventData photonEvent)
+        {
+            switch (photonEvent.Code)
+            {
+                case 103: // Volume voix
+                    if (photonEvent.CustomData is object[] data1 && data1.Length == 2)
+                    {
+                        int viewID = (int)data1[0];
+                        float volume = (float)data1[1];
+
+                        if (WalkieRegistry.ActiveWalkieUsers.Contains(viewID))
+                        {
+                            PhotonView view = PhotonView.Find(viewID);
+                            if (view != null && view.TryGetComponent(out WalkieReceiver receiver))
+                            {
+                                receiver.SetVolume(volume * 2f);
+                            }
+                        }
+                    }
+                    break;
+
+                case 104: // Sync état ON/OFF
+                    if (photonEvent.CustomData is object[] data2 && data2.Length == 2)
+                    {
+                        int viewID = (int)data2[0];
+                        bool enabled = (bool)data2[1];
+
+                        if (enabled)
+                            WalkieRegistry.ActiveWalkieUsers.Add(viewID);
+                        else
+                            WalkieRegistry.ActiveWalkieUsers.Remove(viewID);
+
+                        Debug.Log($"[WalkieNet] Walkie state updated: ViewID {viewID} -> {(enabled ? "ON" : "OFF")}");
+                    }
+                    break;
+            }
+        }
+
+
+        private IEnumerator RegisterGoldenGunWhenReady(GameObject goldenGunPrefab)
+        {
+            while (!(PhotonNetwork.PrefabPool.GetType().Name.Contains("CustomPrefabPool")))
+            {
+                Debug.Log("[GoldenGun] Waiting for CustomPrefabPool...");
+                yield return null;
+            }
+
+            // Enregistrement du prefab dans CustomPrefabPool
+            var registerMethod = PhotonNetwork.PrefabPool.GetType().GetMethod("RegisterPrefab");
+            if (registerMethod != null)
+            {
+                registerMethod.Invoke(PhotonNetwork.PrefabPool, new object[] { "Items/Golden Gun", goldenGunPrefab });
+                Debug.Log("[GoldenGun] Prefab enregistré avec succès !");
+            }
+            else
+            {
+                Debug.LogError("[GoldenGun] Méthode RegisterPrefab introuvable !");
+            }
+
+            // Enregistrement de l'item dans les systèmes
+
+            Debug.Log("[GoldenGun] Item enregistré avec succès !");
+        }
+
+        public static void DisableAllMapGeometry()
+        {
+            if (Map.Instance == null) return;
+
+            // Liste de tous les objets à désactiver
+            var map = Map.Instance;
+
+            map.FloorObject1x1?.SetActive(false);
+            map.FloorObject1x1Diagonal?.SetActive(false);
+            map.FloorObject1x1Curve?.SetActive(false);
+            map.FloorObject1x1CurveInverted?.SetActive(false);
+
+            map.FloorObject1x05?.SetActive(false);
+            map.FloorObject1x05Diagonal?.SetActive(false);
+            map.FloorObject1x05Curve?.SetActive(false);
+            map.FloorObject1x05CurveInverted?.SetActive(false);
+
+            map.FloorObject1x025?.SetActive(false);
+            map.FloorObject1x025Diagonal?.SetActive(false);
+
+            map.RoomVolume?.SetActive(false);
+            map.RoomVolumeOutline?.SetActive(false);
+
+            map.FloorTruck?.SetActive(false);
+            map.WallTruck?.SetActive(false);
+
+            map.FloorUsed?.SetActive(false);
+            map.WallUsed?.SetActive(false);
+
+            map.FloorInactive?.SetActive(false);
+            map.WallInactive?.SetActive(false);
+
+            map.Wall1x1Object?.SetActive(false);
+            map.Wall1x1DiagonalObject?.SetActive(false);
+            map.Wall1x1CurveObject?.SetActive(false);
+
+            map.Wall1x05Object?.SetActive(false);
+            map.Wall1x05DiagonalObject?.SetActive(false);
+            map.Wall1x05CurveObject?.SetActive(false);
+
+            map.Wall1x025Object?.SetActive(false);
+            map.Wall1x025DiagonalObject?.SetActive(false);
+
+            map.Door1x1Object?.SetActive(false);
+            map.Door1x05Object?.SetActive(false);
+            map.Door1x1DiagonalObject?.SetActive(false);
+            map.Door1x05DiagonalObject?.SetActive(false);
+            map.Door1x2Object?.SetActive(false);
+            map.Door1x1WizardObject?.SetActive(false);
+            map.Door1x1ArcticObject?.SetActive(false);
+
+            map.DoorBlockedObject?.SetActive(false);
+            map.DoorBlockedWizardObject?.SetActive(false);
+            map.DoorBlockedArcticObject?.SetActive(false);
+            map.DoorDiagonalObject?.SetActive(false);
+
+            map.StairsObject?.SetActive(false);
+
+
+            map.EnemyObject?.SetActive(false);
+            map.CustomObject?.SetActive(false);
+            map.ValuableObject?.SetActive(false);
+
+            foreach (var i in map.MapModules)
+            {
+                try
+                {
+                    i.gameObject.SetActive(false);
+                }
+                catch { }
+            }
+
+            foreach (var i in map.Layers)
+            {
+                try
+                {
+                    i.gameObject.SetActive(false);
+                }
+                catch { }
+            }
+        }
+
+        public static void ActivateAllMapGeometry()
+        {
+            if (Map.Instance == null) return;
+
+            // Liste de tous les objets à désactiver
+            var map = Map.Instance;
+
+            map.EnemyObject?.SetActive(true);
+            map.CustomObject?.SetActive(true);
+            map.ValuableObject?.SetActive(true);
+
+            map.FloorObject1x1?.SetActive(true);
+            map.FloorObject1x1Diagonal?.SetActive(true);
+            map.FloorObject1x1Curve?.SetActive(true);
+            map.FloorObject1x1CurveInverted?.SetActive(true);
+
+            map.FloorObject1x05?.SetActive(true);
+            map.FloorObject1x05Diagonal?.SetActive(true);
+            map.FloorObject1x05Curve?.SetActive(true);
+            map.FloorObject1x05CurveInverted?.SetActive(true);
+
+            map.FloorObject1x025?.SetActive(true);
+            map.FloorObject1x025Diagonal?.SetActive(true);
+
+            map.RoomVolume?.SetActive(true);
+            map.RoomVolumeOutline?.SetActive(true);
+
+            map.FloorTruck?.SetActive(true);
+            map.WallTruck?.SetActive(true);
+
+            map.FloorUsed?.SetActive(true);
+            map.WallUsed?.SetActive(true);
+
+            map.FloorInactive?.SetActive(true);
+            map.WallInactive?.SetActive(true);
+
+            map.Wall1x1Object?.SetActive(true);
+            map.Wall1x1DiagonalObject?.SetActive(true);
+            map.Wall1x1CurveObject?.SetActive(true);
+
+            map.Wall1x05Object?.SetActive(true);
+            map.Wall1x05DiagonalObject?.SetActive(true);
+            map.Wall1x05CurveObject?.SetActive(true);
+
+            map.Wall1x025Object?.SetActive(true);
+            map.Wall1x025DiagonalObject?.SetActive(true);
+
+            map.Door1x1Object?.SetActive(true);
+            map.Door1x05Object?.SetActive(true);
+            map.Door1x1DiagonalObject?.SetActive(true);
+            map.Door1x05DiagonalObject?.SetActive(true);
+            map.Door1x2Object?.SetActive(true);
+            map.Door1x1WizardObject?.SetActive(true);
+            map.Door1x1ArcticObject?.SetActive(true);
+
+            map.DoorBlockedObject?.SetActive(true);
+            map.DoorBlockedWizardObject?.SetActive(true);
+            map.DoorBlockedArcticObject?.SetActive(true);
+            map.DoorDiagonalObject?.SetActive(true);
+
+            map.StairsObject?.SetActive(true);
+
+
+            foreach (var i in map.MapModules)
+            {
+                try
+                {
+                    i.gameObject.SetActive(true);
+                }
+                catch { }
+            }
+
+            foreach (var i in map.Layers)
+            {
+                try
+                {
+                    i.gameObject.SetActive(true);
+                }
+                catch { }
+            }
+        }
+
+        //Commande DEVS
 
         public static void ListHUDObjects()
         {
@@ -162,7 +412,6 @@ namespace DifficultyFeature
                 ListChildrenRecursive(child, indent + 1);
             }
         }
-
 
         private void LogAllGameObjectsInScene()
         {

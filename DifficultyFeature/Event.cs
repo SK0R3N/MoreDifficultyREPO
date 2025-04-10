@@ -25,11 +25,172 @@ using UnityEngine.Rendering;
 using UnityEngine.UI;
 using UnityEngine.UIElements;
 using UnityEngine.Video;
+using static b;
 
 namespace DifficultyFeature
 {
     internal class Event
     {
+
+        [RequireComponent(typeof(LineRenderer))]
+        public class WaveformVisualizer : MonoBehaviour
+        {
+            public AudioSource audioSource;
+            public int sampleSize = 512;
+            public float amplitude = 10f;
+            private float[] samples;
+            private LineRenderer lineRenderer;
+            public PlayerVoiceChat voiceChat;
+
+            void Start()
+            {
+                samples = new float[sampleSize];
+                lineRenderer = GetComponent<LineRenderer>();
+                lineRenderer.positionCount = sampleSize;
+            }
+
+            void Update()
+            {
+                float loudness = WalkieReceiver.instance != null ? WalkieReceiver.instance.GetCurrentVolume() : 0.01f;
+
+                for (int i = 0; i < sampleSize; i++)
+                {
+                    float x = i * 0.01f;
+                    float z = Mathf.Sin(i * 0.2f + Time.time * 4f) * loudness * amplitude;
+                    lineRenderer.SetPosition(i, new Vector3(x, 0, z));
+                }
+            }
+        }
+
+        public class BetterWalkieTakkie : ISlotEvent
+        {
+            internal static BetterWalkieTakkie instance { get; private set; } = null;
+            public string EventName => "Time Slow";
+            public string IconName => "icon_timeslow";
+            public string Asset => "TestAsset";
+
+            internal static GameObject waveformCameraGO;
+            internal static GameObject waveformVisualizerGO;
+            internal static Material originalDisplayMaterial;
+            internal static Material waveformMaterialInstance;
+            internal static RenderTexture waveformRenderTexture;
+            internal static AssetBundle walkyBundle;
+            internal static Material waveformMat;
+            internal static bool Toggle;
+
+
+            public void Execute()
+            {
+                instance = this;
+                //ToggleWalkie(true);
+            }
+
+            public void ToggleWalkie(bool enabled)
+            {
+                PlayerAvatar player = PlayerAvatar.instance;
+                Transform display = player.mapToolController.transform.Find("Controller/Visuals/Hide/Main Spring Target/Main Spring/Base Offset/Bob/Stick/stick/Main Unit/Display Spring Target/Display Spring/Counter/display_1x1");
+
+                // Rechercher dynamiquement si besoin
+                foreach (Transform t in player.mapToolController.VisualTransform.GetComponentsInChildren<Transform>(true))
+                    if (t.name == "display_1x1")
+                        display = t;
+
+                if (!display.TryGetComponent(out MeshRenderer renderer))
+                {
+                    Debug.LogError("[WalkieToggle] Pas de MeshRenderer sur display_1x1.");
+                    return;
+                }
+
+                Toggle = enabled;
+                if (enabled)
+                {
+                    // Sauvegarde le matériel de base
+                    WalkieReceiver.walkieEnabled = true;
+                    if (originalDisplayMaterial == null)
+                        originalDisplayMaterial = renderer.material;
+
+                    // Créer RenderTexture
+                    waveformRenderTexture = new RenderTexture(512, 512, 16);
+
+                    // Créer caméra
+                    waveformCameraGO = new GameObject("WaveformCamera");
+                    var cam = waveformCameraGO.AddComponent<Camera>();
+                    cam.orthographic = true;
+                    cam.orthographicSize = 3f;
+                    cam.clearFlags = CameraClearFlags.SolidColor;
+                    cam.backgroundColor = Color.black;
+                    cam.cullingMask = LayerMask.GetMask("TopLayerOnly");
+                    cam.targetTexture = waveformRenderTexture;
+                    waveformCameraGO.transform.position = new Vector3(0, 5f, 0);
+                    waveformCameraGO.transform.rotation = Quaternion.Euler(90f, 0, 0);
+
+                    // Créer waveform
+                    waveformVisualizerGO = new GameObject("WaveformVisualizer");
+                    waveformVisualizerGO.layer = LayerMask.NameToLayer("TopLayerOnly");
+                    var lr = waveformVisualizerGO.AddComponent<LineRenderer>();
+                    lr.material = new Material(Shader.Find("Sprites/Default"));
+                    lr.startColor = Color.green;
+                    lr.endColor = Color.red;
+                    lr.widthMultiplier = 0.05f;
+                    lr.useWorldSpace = false;
+                    waveformVisualizerGO.transform.position = new Vector3(-512 * 0.005f, 0, -256 * 0.005f);
+                    waveformVisualizerGO.transform.rotation = Quaternion.identity;
+
+                    var vis = waveformVisualizerGO.AddComponent<WaveformVisualizer>();
+                    vis.voiceChat = player.voiceChat;
+
+                    // Charger asset bundle et matériel
+                    string bundlePath = Path.Combine(Paths.PluginPath, "SK0R3N-DifficultyFeature", "assets", "walky");
+                    if(walkyBundle == null)
+                    walkyBundle = AssetBundle.LoadFromFile(bundlePath);
+
+                    if (walkyBundle == null)
+                    {
+                        Debug.LogError("[WalkieToggle] AssetBundle introuvable.");
+                        return;
+                    }
+
+                    if(waveformMat == null)
+                    waveformMat = walkyBundle.LoadAsset<Material>("WaveformDisplayMat");
+
+                    if (waveformMat == null)
+                    {
+                        Debug.LogError("[WalkieToggle] WaveformDisplayMat introuvable dans l'AssetBundle.");
+                        return;
+                    }
+
+                    waveformMaterialInstance = new Material(waveformMat);
+                    waveformMaterialInstance.mainTexture = waveformRenderTexture;
+
+                    renderer.material = waveformMaterialInstance;
+
+                    // Ajout du WalkieReceiver si manquant
+                    if (!player.GetComponent<WalkieReceiver>())
+                        player.gameObject.AddComponent<WalkieReceiver>();
+                }
+                else
+                {
+                    // Restauration matériel original
+                    WalkieReceiver.walkieEnabled = false;
+                    Debug.Log(originalDisplayMaterial);
+                    if (originalDisplayMaterial != null)
+                        renderer.material = originalDisplayMaterial;
+
+                    Debug.Log(waveformCameraGO);
+                    Debug.Log(waveformVisualizerGO);
+                    Debug.Log(waveformRenderTexture);
+                    // Suppression objets
+                    if (waveformCameraGO != null) GameObject.Destroy(waveformCameraGO);
+                    if (waveformVisualizerGO != null) GameObject.Destroy(waveformVisualizerGO);
+                    if (waveformRenderTexture != null) waveformRenderTexture.Release();
+
+                    waveformCameraGO = null;
+                    waveformVisualizerGO = null;
+                    waveformRenderTexture = null;
+                }
+            }
+        }
+
         public class SurviveHorror : ISlotEvent
         {
             public string EventName => "SurviveHorrror";
@@ -137,7 +298,6 @@ namespace DifficultyFeature
 
                 if (view != null && view.IsMine)
                 {
-                    Debug.Log("Start Event");
                     view.RPC("ApplyTimeSlowEffect", RpcTarget.All, view.ViewID);
                 }
             }
@@ -156,7 +316,6 @@ namespace DifficultyFeature
 
                 if (photonView.IsMine)
                 {
-                    Debug.Log("Start Event Again");
                     ApplySlow();
                     StartCoroutine(RemoveEffectAfterTime());
                 }
@@ -168,7 +327,6 @@ namespace DifficultyFeature
                 PhotonView view = PhotonView.Find(viewID);
                 if (view == null) return;
 
-                Debug.Log("Start Event real");
                 var controller = view.GetComponent<TimeSlowEffectController>();
                 if (controller == null)
                     controller = view.gameObject.AddComponent<TimeSlowEffectController>();
@@ -179,12 +337,21 @@ namespace DifficultyFeature
             private void ApplySlow()
             {
                 var player = PlayerController.instance;
+                Debug.Log(player.name);
                 if (player == null) return;
 
-                player.OverrideSpeed(0.5f);
-                player.OverrideLookSpeed(0.5f, 2f, 1f);
-                player.OverrideAnimationSpeed(0.2f, 1f, 2f);
-                player.OverrideTimeScale(0.1f);
+                PlayerAvatar instance = PlayerAvatar.instance;
+                if ((bool)instance.voiceChat)
+                {
+                    instance.voiceChat.OverridePitch(0.65f, 1f, 2f);
+                }
+                instance.OverridePupilSize(3f, 4, 1f, 1f, 5f, 0.5f, 30f);
+                PlayerController.instance.OverrideSpeed(0.5f, 30f);
+                PlayerController.instance.OverrideLookSpeed(0.5f, 2f, 1f, 30f);
+                PlayerController.instance.OverrideAnimationSpeed(0.2f, 1f, 2f, 30f);
+                PlayerController.instance.OverrideTimeScale(0.1f, 30f);
+                CameraZoom.Instance.OverrideZoomSet(50f, 30f, 0.5f, 1f, base.gameObject, 0);
+                PostProcessing.Instance.SaturationOverride(50f, 0.1f, 0.5f, 30f, base.gameObject);
             }
 
             private void ResetToDefault()
@@ -192,10 +359,12 @@ namespace DifficultyFeature
                 var player = PlayerController.instance;
                 if (player == null) return;
 
+                
                 player.OverrideSpeed(1f);                // Vitesse normale
                 player.OverrideLookSpeed(1f, 1f, 1f);     // Rotation standard
                 player.OverrideAnimationSpeed(1f, 1f, 1f); // Animations
-                player.OverrideTimeScale(1f);             // Temps normal
+                player.OverrideTimeScale(1f);  
+                // Temps normal
             }
 
             private IEnumerator RemoveEffectAfterTime()
