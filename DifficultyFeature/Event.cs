@@ -1,6 +1,8 @@
 ﻿using BepInEx;
+using ExitGames.Client.Photon;
 using HarmonyLib;
 using Photon.Pun;
+using Photon.Realtime;
 using Photon.Voice;
 using REPOLib.Extensions;
 using REPOLib.Modules;
@@ -26,41 +28,12 @@ using UnityEngine.UI;
 using UnityEngine.UIElements;
 using UnityEngine.Video;
 using static b;
+using static DifficultyFeature.Event;
 
 namespace DifficultyFeature
 {
     internal class Event
     {
-
-        [RequireComponent(typeof(LineRenderer))]
-        public class WaveformVisualizer : MonoBehaviour
-        {
-            public AudioSource audioSource;
-            public int sampleSize = 512;
-            public float amplitude = 10f;
-            private float[] samples;
-            private LineRenderer lineRenderer;
-            public PlayerVoiceChat voiceChat;
-
-            void Start()
-            {
-                samples = new float[sampleSize];
-                lineRenderer = GetComponent<LineRenderer>();
-                lineRenderer.positionCount = sampleSize;
-            }
-
-            void Update()
-            {
-                float loudness = WalkieReceiver.instance != null ? WalkieReceiver.instance.GetCurrentVolume() : 0.01f;
-
-                for (int i = 0; i < sampleSize; i++)
-                {
-                    float x = i * 0.01f;
-                    float z = Mathf.Sin(i * 0.2f + Time.time * 4f) * loudness * amplitude;
-                    lineRenderer.SetPosition(i, new Vector3(x, 0, z));
-                }
-            }
-        }
 
         public class BetterWalkieTakkie : ISlotEvent
         {
@@ -189,7 +162,38 @@ namespace DifficultyFeature
                     waveformRenderTexture = null;
                 }
             }
-        }
+
+
+            [RequireComponent(typeof(LineRenderer))]
+            public class WaveformVisualizer : MonoBehaviour
+            {
+                public AudioSource audioSource;
+                public int sampleSize = 512;
+                public float amplitude = 10f;
+                private float[] samples;
+                private LineRenderer lineRenderer;
+                public PlayerVoiceChat voiceChat;
+
+                void Start()
+                {
+                    samples = new float[sampleSize];
+                    lineRenderer = GetComponent<LineRenderer>();
+                    lineRenderer.positionCount = sampleSize;
+                }
+
+                void Update()
+                {
+                    float loudness = WalkieReceiver.instance != null ? WalkieReceiver.instance.GetCurrentVolume() : 0.01f;
+
+                    for (int i = 0; i < sampleSize; i++)
+                    {
+                        float x = i * 0.01f;
+                        float z = Mathf.Sin(i * 0.2f + Time.time * 4f) * loudness * amplitude;
+                        lineRenderer.SetPosition(i, new Vector3(x, 0, z));
+                    }
+                }
+            }
+        } //Finis ?
 
         public class SurviveHorror : ISlotEvent
         {
@@ -276,7 +280,7 @@ namespace DifficultyFeature
                     }
                 }
             }
-        }
+        } //Non Finis
 
         public class TimeSlowEvent : ISlotEvent
         {
@@ -302,79 +306,79 @@ namespace DifficultyFeature
                 }
             }
 
-        }
-
-        public class TimeSlowEffectController : MonoBehaviourPun
-        {
-            private float duration = 30f;
-            private bool isActive = false;
-
-            public void Trigger()
+            public class TimeSlowEffectController : MonoBehaviourPun
             {
-                if (isActive) return;
-                isActive = true;
+                private float duration = 30f;
+                private bool isActive = false;
 
-                if (photonView.IsMine)
+                public void Trigger()
                 {
-                    ApplySlow();
-                    StartCoroutine(RemoveEffectAfterTime());
+                    if (isActive) return;
+                    isActive = true;
+
+                    if (photonView.IsMine)
+                    {
+                        ApplySlow();
+                        StartCoroutine(RemoveEffectAfterTime());
+                    }
+                }
+
+                [PunRPC]
+                public void ApplyTimeSlowEffect(int viewID)
+                {
+                    PhotonView view = PhotonView.Find(viewID);
+                    if (view == null) return;
+
+                    var controller = view.GetComponent<TimeSlowEffectController>();
+                    if (controller == null)
+                        controller = view.gameObject.AddComponent<TimeSlowEffectController>();
+
+                    controller.Trigger();
+                }
+
+                private void ApplySlow()
+                {
+                    var player = PlayerController.instance;
+                    Debug.Log(player.name);
+                    if (player == null) return;
+
+                    PlayerAvatar instance = PlayerAvatar.instance;
+                    if ((bool)instance.voiceChat)
+                    {
+                        instance.voiceChat.OverridePitch(0.65f, 1f, 2f);
+                    }
+                    instance.OverridePupilSize(3f, 4, 1f, 1f, 5f, 0.5f, 30f);
+                    PlayerController.instance.OverrideSpeed(0.5f, 30f);
+                    PlayerController.instance.OverrideLookSpeed(0.5f, 2f, 1f, 30f);
+                    PlayerController.instance.OverrideAnimationSpeed(0.2f, 1f, 2f, 30f);
+                    PlayerController.instance.OverrideTimeScale(0.1f, 30f);
+                    CameraZoom.Instance.OverrideZoomSet(50f, 30f, 0.5f, 1f, base.gameObject, 0);
+                    PostProcessing.Instance.SaturationOverride(50f, 0.1f, 0.5f, 30f, base.gameObject);
+                }
+
+                private void ResetToDefault()
+                {
+                    var player = PlayerController.instance;
+                    if (player == null) return;
+
+
+                    player.OverrideSpeed(1f);                // Vitesse normale
+                    player.OverrideLookSpeed(1f, 1f, 1f);     // Rotation standard
+                    player.OverrideAnimationSpeed(1f, 1f, 1f); // Animations
+                    player.OverrideTimeScale(1f);
+                    // Temps normal
+                }
+
+                private IEnumerator RemoveEffectAfterTime()
+                {
+                    yield return new WaitForSeconds(duration);
+                    ResetToDefault();
+                    isActive = false;
+                    Destroy(this);
                 }
             }
 
-            [PunRPC]
-            public void ApplyTimeSlowEffect(int viewID)
-            {
-                PhotonView view = PhotonView.Find(viewID);
-                if (view == null) return;
-
-                var controller = view.GetComponent<TimeSlowEffectController>();
-                if (controller == null)
-                    controller = view.gameObject.AddComponent<TimeSlowEffectController>();
-
-                controller.Trigger();
-            }
-
-            private void ApplySlow()
-            {
-                var player = PlayerController.instance;
-                Debug.Log(player.name);
-                if (player == null) return;
-
-                PlayerAvatar instance = PlayerAvatar.instance;
-                if ((bool)instance.voiceChat)
-                {
-                    instance.voiceChat.OverridePitch(0.65f, 1f, 2f);
-                }
-                instance.OverridePupilSize(3f, 4, 1f, 1f, 5f, 0.5f, 30f);
-                PlayerController.instance.OverrideSpeed(0.5f, 30f);
-                PlayerController.instance.OverrideLookSpeed(0.5f, 2f, 1f, 30f);
-                PlayerController.instance.OverrideAnimationSpeed(0.2f, 1f, 2f, 30f);
-                PlayerController.instance.OverrideTimeScale(0.1f, 30f);
-                CameraZoom.Instance.OverrideZoomSet(50f, 30f, 0.5f, 1f, base.gameObject, 0);
-                PostProcessing.Instance.SaturationOverride(50f, 0.1f, 0.5f, 30f, base.gameObject);
-            }
-
-            private void ResetToDefault()
-            {
-                var player = PlayerController.instance;
-                if (player == null) return;
-
-                
-                player.OverrideSpeed(1f);                // Vitesse normale
-                player.OverrideLookSpeed(1f, 1f, 1f);     // Rotation standard
-                player.OverrideAnimationSpeed(1f, 1f, 1f); // Animations
-                player.OverrideTimeScale(1f);  
-                // Temps normal
-            }
-
-            private IEnumerator RemoveEffectAfterTime()
-            {
-                yield return new WaitForSeconds(duration);
-                ResetToDefault();
-                isActive = false;
-                Destroy(this);
-            }
-        }
+        } //Finis (Ajout peut-être bien)
 
         public class RandomTeleportEvent : ISlotEvent
         {
@@ -409,7 +413,7 @@ namespace DifficultyFeature
                 player.transform.position = targetPosition;
                 Debug.Log($"[RandomTP] Joueur téléporté dans {randomModule.name}");
             }
-        }
+        } //Finis (Manque vérification tp dans un trou) //Bug tp juste une fois
 
         public class GoldenGunEvent : ISlotEvent
         {
@@ -446,7 +450,46 @@ namespace DifficultyFeature
                 }
             }
 
-        }
+            [HarmonyPatch(typeof(ItemGunBullet), nameof(ItemGunBullet.ActivateAll))]
+            public class GoldenGunBulletPatch
+            {
+                static void Postfix(ItemGunBullet __instance)
+                {
+                    if (__instance.hurtCollider == null)
+                        return;
+
+                    if (GoldenGunLinker.GunQueue.Count > 0)
+                    {
+                        var gun = GoldenGunLinker.GunQueue.Dequeue();
+
+                        if (gun != null && gun.name.ToLower().Contains("golden"))
+                        {
+                            __instance.hurtCollider.enemyDamage = 999;
+                            Debug.Log("[GoldenGun] Dégâts boostés à 999 !");
+                        }
+                    }
+                    else
+                    {
+                        Debug.LogWarning("[GoldenGun] Aucun gun lié trouvé dans la file !");
+                    }
+                }
+            }
+
+            public static class GoldenGunLinker
+            {
+                public static Queue<ItemGun> GunQueue = new Queue<ItemGun>();
+            }
+
+            [HarmonyPatch(typeof(ItemGun), nameof(ItemGun.ShootBulletRPC))]
+            public class GoldenGun_ShootBulletPatch
+            {
+                static void Prefix(ItemGun __instance)
+                {
+                    GoldenGunLinker.GunQueue.Enqueue(__instance);
+                }
+            }
+
+        } //Finis Marche Bien
 
         public class RevealMapEvent : ISlotEvent
         {
@@ -476,46 +519,7 @@ namespace DifficultyFeature
                 Debug.Log($"[RevealMapEvent] Carte révélée : {revealed} objets affichés.");
             }
 
-        }
-
-        [HarmonyPatch(typeof(ItemGunBullet), nameof(ItemGunBullet.ActivateAll))]
-        public class GoldenGunBulletPatch
-        {
-            static void Postfix(ItemGunBullet __instance)
-            {
-                if (__instance.hurtCollider == null)
-                    return;
-
-                if (GoldenGunLinker.GunQueue.Count > 0)
-                {
-                    var gun = GoldenGunLinker.GunQueue.Dequeue();
-
-                    if (gun != null && gun.name.ToLower().Contains("golden"))
-                    {
-                        __instance.hurtCollider.enemyDamage = 999;
-                        Debug.Log("[GoldenGun] Dégâts boostés à 999 !");
-                    }
-                }
-                else
-                {
-                    Debug.LogWarning("[GoldenGun] Aucun gun lié trouvé dans la file !");
-                }
-            }
-        }
-
-        public static class GoldenGunLinker
-        {
-            public static Queue<ItemGun> GunQueue = new Queue<ItemGun>();
-        }
-
-        [HarmonyPatch(typeof(ItemGun), nameof(ItemGun.ShootBulletRPC))]
-        public class GoldenGun_ShootBulletPatch
-        {
-            static void Prefix(ItemGun __instance)
-            {
-                GoldenGunLinker.GunQueue.Enqueue(__instance);
-            }
-        }
+        } //Finis Marche Bien
 
         public class EnemyDuckEvent : ISlotEvent
         {
@@ -554,7 +558,7 @@ namespace DifficultyFeature
                     Enemies.SpawnEnemy(enemySetup, spawnPos, Quaternion.identity, spawnDespawned: false);
                 }
             }
-        }
+        } //Finis Marche Bien
 
         public class MarioStarEvent : ISlotEvent
         {
@@ -683,99 +687,98 @@ namespace DifficultyFeature
                 UnityEngine.Object.Destroy(obj, starClip.length + 1f);
             }
 
-           
-        }
-
-        public class MarioStarPower : MonoBehaviour
-        {
-            public float duration = 5f;
-            private Collider triggerCollider;
-
-            private void Start()
+            private class MarioStarPower : MonoBehaviour
             {
-                Debug.Log("[MarioStarPower] Init...");
+                public float duration = 5f;
+                private Collider triggerCollider;
 
-                // Ajoute un SphereCollider si aucun
-                triggerCollider = GetComponent<Collider>();
-                if (triggerCollider == null)
+                private void Start()
                 {
-                    Debug.Log("[MarioStarPower] Aucun collider trouvé. Ajout d’un SphereCollider.");
-                    triggerCollider = gameObject.AddComponent<SphereCollider>();
-                    ((SphereCollider)triggerCollider).radius = 1.5f;
-                }
-                else
-                {
-                    Debug.Log($"[MarioStarPower] Collider déjà présent: {triggerCollider.GetType().Name}");
-                }
-                GameObject overlay = GameObject.Find("RainbowOverlay");
-                foreach (Transform t in GameObject.FindObjectsOfType<Transform>(true))
-                {
-                    if (t.name == "RainbowOverlay")
-                        overlay = t.gameObject;
-                }
+                    Debug.Log("[MarioStarPower] Init...");
 
-                triggerCollider.isTrigger = true;
-
-                // Vérifie/ajoute un Rigidbody (obligatoire pour que OnTriggerEnter fonctionne)
-                if (GetComponent<Rigidbody>() == null)
-                {
-                    Debug.Log("[MarioStarPower] Aucun Rigidbody trouvé. Ajout d’un Rigidbody kinematic.");
-                    var rb = gameObject.AddComponent<Rigidbody>();
-                    rb.isKinematic = true;
-                    rb.useGravity = false;
-                }
-                else
-                {
-                    Debug.Log("[MarioStarPower] Rigidbody déjà présent.");
-                }
-            }
-
-            private Enemy FindEnemyRoot(Transform current)
-            {
-                while (current != null)
-                {
-                    // Si on tombe directement sur un Enemy, parfait
-                    Enemy direct = current.GetComponent<Enemy>();
-                    if (direct != null)
-                        return direct;
-
-                    // Sinon on check s'il y a un EnemyParent, et on va chercher .Enemy
-                    EnemyParent parent = current.GetComponent<EnemyParent>();
-                    if (parent != null && parent.Enemy != null)
+                    // Ajoute un SphereCollider si aucun
+                    triggerCollider = GetComponent<Collider>();
+                    if (triggerCollider == null)
                     {
-                        Debug.Log($"[MarioStarPower] Enemy trouvé via EnemyParent → {parent.Enemy.name}");
-                        return parent.Enemy;
-                    }
-
-                    current = current.parent;
-                }
-
-                return null;
-            }
-
-            private void OnTriggerEnter(Collider other)
-            {
-
-                Enemy enemy = FindEnemyRoot(other.transform);
-                if (enemy != null)
-                {
-                    Debug.Log($"[MarioStarPower] {enemy.name} est un ennemi. Tentative de dégâts...");
-                    if (enemy.HasHealth && enemy.Health != null && !enemy.Health.dead)
-                    {
-                        Debug.Log($"[MarioStarPower] Ennemi {enemy.name} valide. Application des 999 dégâts.");
-                        enemy.Health.Hurt(999, Vector3.zero);
+                        Debug.Log("[MarioStarPower] Aucun collider trouvé. Ajout d’un SphereCollider.");
+                        triggerCollider = gameObject.AddComponent<SphereCollider>();
+                        ((SphereCollider)triggerCollider).radius = 1.5f;
                     }
                     else
                     {
-                        Debug.LogWarning($"[MarioStarPower] {enemy.name} n’a pas de composant santé valide.");
+                        Debug.Log($"[MarioStarPower] Collider déjà présent: {triggerCollider.GetType().Name}");
+                    }
+                    GameObject overlay = GameObject.Find("RainbowOverlay");
+                    foreach (Transform t in GameObject.FindObjectsOfType<Transform>(true))
+                    {
+                        if (t.name == "RainbowOverlay")
+                            overlay = t.gameObject;
+                    }
+
+                    triggerCollider.isTrigger = true;
+
+                    // Vérifie/ajoute un Rigidbody (obligatoire pour que OnTriggerEnter fonctionne)
+                    if (GetComponent<Rigidbody>() == null)
+                    {
+                        Debug.Log("[MarioStarPower] Aucun Rigidbody trouvé. Ajout d’un Rigidbody kinematic.");
+                        var rb = gameObject.AddComponent<Rigidbody>();
+                        rb.isKinematic = true;
+                        rb.useGravity = false;
+                    }
+                    else
+                    {
+                        Debug.Log("[MarioStarPower] Rigidbody déjà présent.");
                     }
                 }
-                else
+
+                private Enemy FindEnemyRoot(Transform current)
                 {
-                    Debug.Log($"[MarioStarPower] {other.name} n’est pas un ennemi (Enemy introuvable dans la hiérarchie).");
+                    while (current != null)
+                    {
+                        // Si on tombe directement sur un Enemy, parfait
+                        Enemy direct = current.GetComponent<Enemy>();
+                        if (direct != null)
+                            return direct;
+
+                        // Sinon on check s'il y a un EnemyParent, et on va chercher .Enemy
+                        EnemyParent parent = current.GetComponent<EnemyParent>();
+                        if (parent != null && parent.Enemy != null)
+                        {
+                            Debug.Log($"[MarioStarPower] Enemy trouvé via EnemyParent → {parent.Enemy.name}");
+                            return parent.Enemy;
+                        }
+
+                        current = current.parent;
+                    }
+
+                    return null;
+                }
+
+                private void OnTriggerEnter(Collider other)
+                {
+
+                    Enemy enemy = FindEnemyRoot(other.transform);
+                    if (enemy != null)
+                    {
+                        Debug.Log($"[MarioStarPower] {enemy.name} est un ennemi. Tentative de dégâts...");
+                        if (enemy.HasHealth && enemy.Health != null && !enemy.Health.dead)
+                        {
+                            Debug.Log($"[MarioStarPower] Ennemi {enemy.name} valide. Application des 999 dégâts.");
+                            enemy.Health.Hurt(999, Vector3.zero);
+                        }
+                        else
+                        {
+                            Debug.LogWarning($"[MarioStarPower] {enemy.name} n’a pas de composant santé valide.");
+                        }
+                    }
+                    else
+                    {
+                        Debug.Log($"[MarioStarPower] {other.name} n’est pas un ennemi (Enemy introuvable dans la hiérarchie).");
+                    }
                 }
             }
-        }
+
+        } //Finis (Possible bug : étoile juste une fois par jeu lancé)
 
         public class NoMinimap : ISlotEvent
         {
@@ -788,53 +791,53 @@ namespace DifficultyFeature
             {
                 MapLockController.LockForSeconds(60f); 
             }
-        }
 
-        public static class MapLockController
-        {
-            private static Coroutine lockRoutine;
-            private static PlayerAvatar player;
-            private static InputKey originalKey = InputKey.Map;
-
-            public static void LockForSeconds(float seconds)
+            private static class MapLockController
             {
-                player = PlayerAvatar.instance;
-                if (player == null)
+                private static Coroutine lockRoutine;
+                private static PlayerAvatar player;
+                private static InputKey originalKey = InputKey.Map;
+
+                public static void LockForSeconds(float seconds)
                 {
-                    Debug.LogError("[MapLockController] PlayerAvatar is null.");
-                    return;
+                    player = PlayerAvatar.instance;
+                    if (player == null)
+                    {
+                        Debug.LogError("[MapLockController] PlayerAvatar is null.");
+                        return;
+                    }
+
+                    if (lockRoutine != null)
+                    {
+                        player.StopCoroutine(lockRoutine);
+                    }
+
+                    lockRoutine = player.StartCoroutine(LockRoutine(seconds));
                 }
 
-                if (lockRoutine != null)
+                private static IEnumerator LockRoutine(float seconds)
                 {
-                    player.StopCoroutine(lockRoutine);
-                }
+                    Debug.Log("[MapLockController] Map disabled.");
+                    var action = InputManager.instance.GetAction(InputKey.Map);
+                    string bindingPath = action.bindings[0].overridePath;
 
-                lockRoutine = player.StartCoroutine(LockRoutine(seconds));
+                    Debug.Log($"[MapLockController]  {bindingPath} ");
+                    while (seconds > 0f)
+                    {
+                        if (player == null) yield break;
+
+                        // Force la map à rester fermée
+
+                        InputManager.instance.Rebind(InputKey.Map, "<Keyboard>/pause");
+                        seconds -= Time.deltaTime;
+                        yield return null;
+                    }
+                    InputManager.instance.Rebind(InputKey.Map, bindingPath);
+
+                    Debug.Log("[MapLockController] Map re-enabled.");
+                }
             }
-
-            private static IEnumerator LockRoutine(float seconds)
-            {
-                Debug.Log("[MapLockController] Map disabled.");
-                var action = InputManager.instance.GetAction(InputKey.Map);
-                string bindingPath = action.bindings[0].overridePath;
-
-                Debug.Log($"[MapLockController]  {bindingPath} ");
-                while (seconds > 0f)
-                {
-                    if (player == null) yield break;
-
-                    // Force la map à rester fermée
-                    
-                    InputManager.instance.Rebind(InputKey.Map, "<Keyboard>/pause");
-                    seconds -= Time.deltaTime;
-                    yield return null;
-                }
-                InputManager.instance.Rebind(InputKey.Map, bindingPath);
-
-                Debug.Log("[MapLockController] Map re-enabled.");
-            }
-        }
+        } //Finis Marche Bien
 
         public class VideoMapEvent : ISlotEvent
         {
@@ -958,13 +961,16 @@ namespace DifficultyFeature
                     yield return new WaitForSeconds(0.1f); // vérifie toutes les 100 ms
                 }
             }
-        }
+        } //Probablement a retirer
 
         public class AlarmEvent : ISlotEvent
         {
             public string EventName => "Alarm";
             public string IconName => "icon_enemy_rain";
             public string Asset => "TestAsset";
+
+            // Code d'événement personnalisé pour Photon
+            private const byte ALARM_EVENT_CODE = 1;
 
             public void Execute()
             {
@@ -975,7 +981,7 @@ namespace DifficultyFeature
                     return;
                 }
 
-                Debug.Log("[AlarmEvent] Triggering alarm via RPC.");
+                Debug.Log("[AlarmEvent] Triggering alarm via RaiseEvent.");
 
                 PhotonView photonView = playerAvatar.GetComponent<PhotonView>();
                 if (photonView == null)
@@ -984,178 +990,224 @@ namespace DifficultyFeature
                     return;
                 }
 
-                photonView.RPC("TriggerAlarmRPC", RpcTarget.All, photonView.ViewID, 5f);
+                // Préparer les données de l'événement
+                object[] eventData = new object[] { photonView.ViewID, 15f }; // viewID et duration
+
+                // Envoyer l'événement à tous les joueurs
+                RaiseEventOptions raiseEventOptions = new RaiseEventOptions { Receivers = ReceiverGroup.All };
+                PhotonNetwork.RaiseEvent(ALARM_EVENT_CODE, eventData, raiseEventOptions, SendOptions.SendReliable);
+                AlarmEffectController.Trigger(playerAvatar, 15f);
+
+                Debug.Log($"[AlarmEvent] RaiseEvent sent with ViewID: {photonView.ViewID}, Duration: 5f");
             }
-        }
 
-        public class AlarmEffectController : MonoBehaviour
-        {
-            public float duration = 3f;
-            public AudioClip alarmClip;
-
-            private AudioSource audioSource;
-            private Material eyeMatL, eyeMatR;
-            private Transform head;
-            private float timer;
-            private bool running;
-
-            public static void Trigger(PlayerAvatar avatar, float duration)
+            // Le reste de la classe AlarmEffectController reste inchangé pour l'instant
+            private class AlarmEffectController : MonoBehaviour
             {
-                Debug.Log("[AlarmEffectController] Trigger called.");
+                public float duration = 3f;
+                public AudioClip alarmClip;
 
-                var controller = avatar.gameObject.AddComponent<AlarmEffectController>();
-                controller.duration = duration;
+                private AudioSource audioSource;
+                private Material eyeMatL, eyeMatR;
+                private Transform head;
+                private float timer;
+                private bool running;
+                public static AssetBundle bundle;
 
-                string bundlePath = Path.Combine(Paths.PluginPath, "SK0R3N-DifficultyFeature", "assets", "alarm");
-                Debug.Log($"[AlarmEffectController] Loading asset bundle from: {bundlePath}");
-
-                var bundle = AssetBundle.LoadFromFile(bundlePath);
-                if (bundle == null)
+                public static void Trigger(PlayerAvatar avatar, float duration)
                 {
-                    Debug.LogError("[AlarmEffectController] Failed to load AssetBundle.");
-                    return;
+                    Debug.Log("[AlarmEffectController] Trigger called.");
+
+
+                    var controller = avatar.gameObject.AddComponent<AlarmEffectController>();
+                    controller.duration = duration;
+
+                    string bundlePath = Path.Combine(Paths.PluginPath, "SK0R3N-DifficultyFeature", "assets", "alarm");
+                    Debug.Log($"[AlarmEffectController] Loading asset bundle from: {bundlePath}");
+
+                    if (bundle == null)
+                    {
+                        bundle = AssetBundle.LoadFromFile(bundlePath);
+                    }
+
+                    if (bundle == null)
+                    {
+                        Debug.LogError("[AlarmEffectController] Failed to load AssetBundle.");
+                        return;
+                    }
+
+                    if(controller.alarmClip == null)
+                    controller.alarmClip = bundle.LoadAsset<AudioClip>("alarm_event");
+
+                    if (controller.alarmClip == null)
+                    {
+                        Debug.LogError("[AlarmEffectController] Alarm clip not found in bundle.");
+                    }
+                    else
+                    {
+                        Debug.Log("[AlarmEffectController] Alarm clip loaded successfully.");
+                    }
                 }
 
-                controller.alarmClip = bundle.LoadAsset<AudioClip>("alarm_event");
-                if (controller.alarmClip == null)
+                private void Start()
                 {
-                    Debug.LogError("[AlarmEffectController] Alarm clip not found in bundle.");
+                    Debug.Log("[AlarmEffectController] Start called.");
+
+                    if (!TrySetup()) return;
+
+                    timer = duration;
+                    running = true;
+
+                    audioSource = gameObject.AddComponent<AudioSource>();
+                    audioSource.clip = alarmClip;
+                    audioSource.loop = true;
+                    audioSource.spatialBlend = 1f;
+                    audioSource.volume = 1f;
+                    audioSource.maxDistance = 30f;
+                    audioSource.Play();
+
+                    Debug.Log("[AlarmEffectController] Alarm sound started.");
+
+
+                    Debug.Log("[AlarmEffectController] Enemies alerted by alarm.");
                 }
-                else
+
+                private bool TrySetup()
                 {
-                    Debug.Log("[AlarmEffectController] Alarm clip loaded successfully.");
+                    PlayerAvatar avatar = GetComponent<PlayerAvatar>();
+                    if (avatar == null)
+                    {
+                        Debug.LogError("[AlarmEffectController] PlayerAvatar component not found.");
+                        return false;
+                    }
+
+                    Debug.Log("[AlarmEffectController] Locating eyes and head transforms.");
+
+                    var eyeL = avatar.playerAvatarVisuals.transform.Find("ANIM EYE LEFT/mesh_eye_l");
+                    var eyeR = avatar.playerAvatarVisuals.transform.Find("ANIM EYE RIGHT/mesh_eye_r");
+                    head = avatar.playerAvatarVisuals.transform.Find("ANIM HEAD TOP");
+
+                    foreach (Transform t in avatar.playerAvatarVisuals.GetComponentsInChildren<Transform>(true))
+                    {
+                        if (t.name == "mesh_eye_r")
+                            eyeR = t;
+                        if (t.name == "mesh_eye_l")
+                            eyeL = t;
+                        if (t.name == "ANIM HEAD TOP")
+                            head = t;
+                    }
+
+                    if (eyeR == null || eyeL == null || head == null)
+                    {
+                        Debug.LogWarning("[AlarmEffectController] One or both eyes not found.");
+                        return false;
+                    }
+
+                    eyeMatL = eyeL.GetComponent<Renderer>().material;
+                    eyeMatR = eyeR.GetComponent<Renderer>().material;
+                    Debug.Log("[AlarmEffectController] Eyes and head initialized.");
+
+                    return true;
+                }
+
+                private void Update()
+                {
+                    if (!running) return;
+
+                    EnemyDirector.instance.SetInvestigate(transform.position, 5f);
+                    float intensity = Mathf.PingPong(Time.time * 5f, 1f);
+                    eyeMatL.SetColor("_ColorOverlay", Color.red);
+                    eyeMatR.SetColor("_ColorOverlay", Color.red);
+                    eyeMatL.SetFloat("_ColorOverlayAmount", intensity);
+                    eyeMatR.SetFloat("_ColorOverlayAmount", intensity);
+
+                    if (head)
+                    {
+                        head.localRotation = Quaternion.Euler(
+                            Mathf.Sin(Time.time * 20f) * 2f,
+                            Mathf.Sin(Time.time * 15f) * 2f,
+                            0f
+                        );
+                    }
+
+                    timer -= Time.deltaTime;
+                    if (timer <= 0f)
+                    {
+                        Debug.Log("[AlarmEffectController] Alarm duration ended. Stopping effect.");
+                        StopEffect();
+                    }
+                }
+
+                private void StopEffect()
+                {
+                    running = false;
+
+                    eyeMatL?.SetFloat("_ColorOverlayAmount", 0f);
+                    eyeMatR?.SetFloat("_ColorOverlayAmount", 0f);
+                    if (head) head.localRotation = Quaternion.identity;
+
+                    audioSource?.Stop();
+                    Debug.Log("[AlarmEffectController] Alarm effect stopped. Cleaning up.");
+                    Destroy(this);
+                }
+
+                public class AlarmEventHandler : MonoBehaviour, IOnEventCallback 
+                {
+                    private const byte ALARM_EVENT_CODE = 1;
+
+                    private void Awake()
+                    {
+                        Debug.Log("[AlarmEventHandler] Initialized and waiting for events.");
+                    }
+
+                    public void OnEnable() 
+                    {
+                        PhotonNetwork.AddCallbackTarget(this); // S’enregistrer pour recevoir les événements
+                    }
+
+                    public void OnDisable() 
+                    {
+                        PhotonNetwork.RemoveCallbackTarget(this); 
+                    }
+
+                    public void OnEvent(EventData photonEvent) 
+                    {
+                        if (photonEvent.Code != ALARM_EVENT_CODE) return; 
+
+                        object[] data = (object[])photonEvent.CustomData;
+                        if (data == null || data.Length < 2)
+                        {
+                            Debug.LogError("[AlarmEventHandler] Invalid event data received.");
+                            return;
+                        }
+
+                        int viewId = (int)data[0];
+                        float duration = (float)data[1];
+
+                        PhotonView photonView = PhotonView.Find(viewId);
+                        if (photonView == null)
+                        {
+                            Debug.LogError($"[AlarmEventHandler] ViewID {viewId} not found.");
+                            return;
+                        }
+
+                        GameObject target = photonView.gameObject;
+                        PlayerAvatar avatar = target.GetComponent<PlayerAvatar>();
+                        if (avatar == null)
+                        {
+                            Debug.LogError("[AlarmEventHandler] No PlayerAvatar on target object.");
+                            return;
+                        }
+
+                        Debug.Log($"[AlarmEventHandler] Event received for ViewID {viewId}, Duration: {duration}");
+                        AlarmEvent.AlarmEffectController.Trigger(avatar, duration);
+                    }
                 }
             }
-
-            private void Start()
-            {
-                Debug.Log("[AlarmEffectController] Start called.");
-
-                if (!TrySetup()) return;
-
-                timer = duration;
-                running = true;
-
-                audioSource = gameObject.AddComponent<AudioSource>();
-                audioSource.clip = alarmClip;
-                audioSource.loop = true;
-                audioSource.spatialBlend = 1f;
-                audioSource.volume = 0.3f;
-                audioSource.maxDistance = 30f;
-                audioSource.Play();
-
-                Debug.Log("[AlarmEffectController] Alarm sound started.");
-
-                EnemyDirector.instance.SetInvestigate(transform.position, 5f);
-                Debug.Log("[AlarmEffectController] Enemies alerted by alarm.");
-            }
-
-            private bool TrySetup()
-            {
-                PlayerAvatar avatar = GetComponent<PlayerAvatar>();
-                if (avatar == null)
-                {
-                    Debug.LogError("[AlarmEffectController] PlayerAvatar component not found.");
-                    return false;
-                }
-
-                Debug.Log("[AlarmEffectController] Locating eyes and head transforms.");
-
-                var eyeL = avatar.playerAvatarVisuals.transform.Find("ANIM EYE LEFT/mesh_eye_l");
-                var eyeR = avatar.playerAvatarVisuals.transform.Find("ANIM EYE RIGHT/mesh_eye_r");
-                head = avatar.playerAvatarVisuals.transform.Find("ANIM HEAD TOP");
-
-                foreach (Transform t in avatar.playerAvatarVisuals.GetComponentsInChildren<Transform>(true))
-                {
-                    if (t.name == "mesh_eye_r")
-                        eyeR = t;
-                    if (t.name == "mesh_eye_l")
-                        eyeL = t;
-                    if (t.name == "ANIM HEAD TOP")
-                        head = t;
-                }
-
-                if (eyeR == null || eyeL == null || head == null)
-                {
-                    Debug.LogWarning("[EyeFlashEffect] One or both eyes not found.");
-                    return false
-;
-                }
-
-                eyeMatL = eyeL.GetComponent<Renderer>().material;
-                eyeMatR = eyeR.GetComponent<Renderer>().material;
-                Debug.Log("[AlarmEffectController] Eyes and head initialized.");
-
-
-                return true;
-            }
-
-            private void Update()
-            {
-                if (!running) return;
-
-                float intensity = Mathf.PingPong(Time.time * 5f, 1f);
-                eyeMatL.SetColor("_ColorOverlay", Color.red);
-                eyeMatR.SetColor("_ColorOverlay", Color.red);
-                eyeMatL.SetFloat("_ColorOverlayAmount", intensity);
-                eyeMatR.SetFloat("_ColorOverlayAmount", intensity);
-
-                if (head)
-                {
-                    head.localRotation = Quaternion.Euler(
-                        Mathf.Sin(Time.time * 20f) * 2f,
-                        Mathf.Sin(Time.time * 15f) * 2f,
-                        0f
-                    );
-                }
-
-                timer -= Time.deltaTime;
-                if (timer <= 0f)
-                {
-                    Debug.Log("[AlarmEffectController] Alarm duration ended. Stopping effect.");
-                    StopEffect();
-                }
-            }
-
-            private void StopEffect()
-            {
-                running = false;
-
-                eyeMatL?.SetFloat("_ColorOverlayAmount", 0f);
-                eyeMatR?.SetFloat("_ColorOverlayAmount", 0f);
-                if (head) head.localRotation = Quaternion.identity;
-
-                audioSource?.Stop();
-                Debug.Log("[AlarmEffectController] Alarm effect stopped. Cleaning up.");
-                Destroy(this);
-            }
-
-            [PunRPC]
-            public static void TriggerAlarmRPC(int viewId, float duration)
-            {
-                if (!PhotonView.Find(viewId))
-                {
-                    Debug.LogError($"[AlarmEffectController] ViewID {viewId} not found.");
-                    return;
-                }
-
-                GameObject target = PhotonView.Find(viewId).gameObject;
-                PlayerAvatar avatar = target.GetComponent<PlayerAvatar>();
-
-                if (avatar == null)
-                {
-                    Debug.LogError("[AlarmEffectController] No PlayerAvatar on target object.");
-                    return;
-                }
-
-                Debug.Log($"[AlarmEffectController] RPC triggered for player {viewId}");
-                Trigger(avatar, duration);
-            }
-        }
-
-
+        }//Vérification si il fonctionne toujours
     }
 
-
-
 }
+
+
+

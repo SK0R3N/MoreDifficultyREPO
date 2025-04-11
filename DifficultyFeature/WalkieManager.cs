@@ -37,8 +37,7 @@ public class WalkieVoiceDuplicator : MonoBehaviour
             source.playOnAwake = false;
             source.loop = false;
 
-            // Initialiser un AudioClip réutilisable
-            currentClip = AudioClip.Create("VoiceStream", SAMPLE_RATE / 10, 1, SAMPLE_RATE, false); // 100ms de buffer initial
+            currentClip = AudioClip.Create("VoiceStream", SAMPLE_RATE / 5, 1, SAMPLE_RATE, false); // 200ms buffer
             source.clip = currentClip;
 
             try
@@ -89,7 +88,7 @@ public class WalkieVoiceDuplicator : MonoBehaviour
             if (frameQueue.Count == 0)
             {
                 isPlaying = false;
-                source.Stop(); // Arrêter explicitement quand la queue est vide
+                source.Stop();
                 return;
             }
 
@@ -98,19 +97,14 @@ public class WalkieVoiceDuplicator : MonoBehaviour
 
             try
             {
-                // Mettre à jour les données de l’AudioClip existant
                 if (currentClip.samples < frame.Length)
                 {
-                    // Recréer l’AudioClip si le frame est plus grand que le buffer actuel
                     currentClip = AudioClip.Create("VoiceStream", frame.Length, 1, SAMPLE_RATE, false);
                     source.clip = currentClip;
                 }
                 currentClip.SetData(frame, 0);
 
-                // Jouer l’AudioClip
                 source.Play();
-
-                // Attendre la fin de la lecture
                 float duration = (float)frame.Length / SAMPLE_RATE;
                 source.gameObject.GetComponent<MonoBehaviour>().StartCoroutine(WaitAndPlayNext(duration));
             }
@@ -124,7 +118,7 @@ public class WalkieVoiceDuplicator : MonoBehaviour
 
         private IEnumerator WaitAndPlayNext(float duration)
         {
-            yield return new WaitForSeconds(duration);
+            yield return new WaitForSeconds(duration * 0.9f); // Légère avance pour éviter les gaps
             PlayNextFrame();
         }
     }
@@ -188,7 +182,6 @@ public class WalkieVoiceDuplicator : MonoBehaviour
     private void OnRemoteVoiceAdded(RemoteVoiceLink link)
     {
         Debug.Log($"[WalkieVoiceDuplicator] OnRemoteVoiceAdded called for ActorNumber: {link.PlayerId}, VoiceInfo: {link.VoiceInfo}");
-        Debug.Log($"[WalkieVoiceDuplicator] VoiceInfo.UserData = {link.VoiceInfo.UserData}, Channel: {link.VoiceInfo.Channels}");
 
         int viewID = link.VoiceInfo.UserData is int id ? id : -1;
         if (viewID == -1)
@@ -203,8 +196,6 @@ public class WalkieVoiceDuplicator : MonoBehaviour
             Debug.LogWarning($"[WalkieVoiceDuplicator] PhotonView not found for ViewID {viewID}");
             return;
         }
-
-        Debug.Log($"[WalkieVoiceDuplicator] Found PhotonView for ViewID {viewID}, Owner: {view.Owner?.NickName ?? "None"}");
 
         if (!view.TryGetComponent(out WalkieReceiver receiver))
         {
@@ -224,20 +215,20 @@ public class WalkieVoiceDuplicator : MonoBehaviour
         {
             try
             {
-                // Ignorer les frames du joueur local
                 if (view.IsMine)
                 {
                     Debug.Log($"[WalkieVoiceDuplicator] Ignoring local player frame for ViewID {viewID}");
                     return;
                 }
 
-                Debug.Log($"[WalkieVoiceDuplicator] Frame received from {viewID}, length: {frame?.Buf?.Length ?? -1}, WalkieEnabled: {WalkieReceiver.walkieEnabled}, ActiveWalkieUsers: {string.Join(",", WalkieRegistry.ActiveWalkieUsers)}");
-
                 if (frame == null || frame.Buf == null || frame.Buf.Length == 0)
                 {
                     Debug.LogWarning($"[WalkieVoiceDuplicator] Invalid frame received from {viewID}");
                     return;
                 }
+
+                Debug.Log($"[WalkieVoiceDuplicator] Frame received from {viewID}, length: {frame.Buf.Length}, WalkieEnabled: {WalkieReceiver.walkieEnabled}, ActiveWalkieUsers: {string.Join(",", WalkieRegistry.ActiveWalkieUsers)}");
+
                 if (!WalkieReceiver.walkieEnabled)
                 {
                     Debug.Log("[WalkieVoiceDuplicator] Walkie not enabled, skipping frame");
@@ -245,7 +236,7 @@ public class WalkieVoiceDuplicator : MonoBehaviour
                 }
                 if (!WalkieRegistry.ActiveWalkieUsers.Contains(viewID))
                 {
-                    Debug.Log($"[WalkieVoiceDuplicator] ViewID {viewID} not in ActiveWalkieUsers");
+                    Debug.Log($"[WalkieVoiceDuplicator] ViewID {viewID} not in ActiveWalkieUsers, skipping frame");
                     return;
                 }
 
@@ -267,7 +258,7 @@ public class WalkieVoiceDuplicator : MonoBehaviour
         link.FloatFrameDecoded += frameHandler;
         view.gameObject.AddComponent<RemoteVoiceHandler>().Initialize(link, frameHandler);
 
-        Debug.Log($"[WalkieVoiceDuplicator] Duplicating voice for ViewID {viewID}");
+        Debug.Log($"[WalkieVoiceDuplicator] Duplicator set up for ViewID {viewID}");
     }
 
     private void CleanupDisconnectedPlayers()
@@ -539,17 +530,19 @@ public class WalkieSender : MonoBehaviour
             return;
         }
 
-        // 🔊 On garde la transmission active, le duplicateur écoute tout
         if (voiceView.RecorderInUse != null)
         {
             voiceView.RecorderInUse.TransmitEnabled = true;
-            Debug.Log("[WalkieSender] Recorder transmit enabled.");
+            voiceView.RecorderInUse.VoiceDetection = false; // Désactiver la détection vocale
+                                                            // Tenter d'utiliser FrameDuration
+            voiceView.RecorderInUse.FrameDuration = Photon.Voice.OpusCodec.FrameDuration.Frame60ms; // 60ms
+            Debug.Log($"[WalkieSender] Recorder config: TransmitEnabled={voiceView.RecorderInUse.TransmitEnabled}, VoiceDetection={voiceView.RecorderInUse.VoiceDetection}, FrameDuration={voiceView.RecorderInUse.FrameDuration}");
         }
     }
 
 
 
-    void Update()
+        void Update()
     {
         if (!photonView.IsMine) return;
 
@@ -562,7 +555,7 @@ public class WalkieSender : MonoBehaviour
 
         if (voiceView.RecorderInUse != null && voiceView.RecorderInUse.IsCurrentlyTransmitting)
         {
-            Debug.Log($"[WalkieSender] Recording and transmitting voice, Loudness: {voiceChat.clipLoudness}");
+            //Debug.Log($"[WalkieSender] Recording and transmitting voice, Loudness: {voiceChat.clipLoudness}");
             // Limiter la taille des buffers si nécessaire
             if (voiceChat.clipSampleData.Length > 10000) // Ajuste cette limite selon tes besoins
             {

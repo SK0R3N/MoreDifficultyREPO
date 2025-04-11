@@ -59,7 +59,8 @@ namespace DifficultyFeature
             //SlotEventManager.RegisterEvent(new RandomTeleportEvent());
             //SlotEventManager.RegisterEvent(new TimeSlowEvent());
             //SlotEventManager.RegisterEvent(new SurviveHorror());
-            SlotEventManager.RegisterEvent(new BetterWalkieTakkie());
+            //SlotEventManager.RegisterEvent(new BetterWalkieTakkie());
+            SlotEventManager.RegisterEvent(new AlarmEvent());
             string bundlePath = Path.Combine(Paths.PluginPath, "SK0R3N-DifficultyFeature", "assets", "video");
             AssetBundle bundle = AssetBundle.LoadFromFile(bundlePath);
             request1 = bundle.LoadAssetAsync<VideoClip>("Clash");
@@ -143,9 +144,7 @@ namespace DifficultyFeature
 
             if (Input.GetKeyDown(KeyCode.F7))
             {
-                //SlotAssetLoader.ShowSlotMachineUI();
-                BetterWalkieTakkie t = new BetterWalkieTakkie();
-                t.Execute();
+                SlotAssetLoader.ShowSlotMachineUI();
             }
         }
 
