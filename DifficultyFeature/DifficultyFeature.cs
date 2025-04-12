@@ -62,7 +62,8 @@ namespace DifficultyFeature
             //SlotEventManager.RegisterEvent(new BetterWalkieTakkie());
             //SlotEventManager.RegisterEvent(new AlarmEvent());
             //SlotEventManager.RegisterEvent(new MarioStarEvent());
-            SlotEventManager.RegisterEvent(new ExtractionPointHaulModifier());
+            //SlotEventManager.RegisterEvent(new ExtractionPointHaulModifier());
+            SlotEventManager.RegisterEvent(new RevivePlayerEvent());
             string bundlePath = Path.Combine(Paths.PluginPath, "SK0R3N-DifficultyFeature", "assets", "video");
             AssetBundle bundle = AssetBundle.LoadFromFile(bundlePath);
             request1 = bundle.LoadAssetAsync<VideoClip>("Clash");

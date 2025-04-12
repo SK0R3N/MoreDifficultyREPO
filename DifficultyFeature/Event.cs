@@ -35,6 +35,73 @@ namespace DifficultyFeature
 {
     internal class Event
     {
+        public class RevivePlayerEvent : ISlotEvent
+        {
+            public string EventName => "Revive";
+
+            public string IconName => "Revive";
+
+            public string Asset => "Revive";
+
+            public void Execute()
+            {
+
+                if (!SemiFunc.IsMasterClientOrSingleplayer())
+                {
+                    Debug.Log("[RandomRevivePotion] Not master client or singleplayer. Skipping revive logic.");
+                    return;
+                }
+                List<PlayerDeathHead> deadHeads = FindAllPlayerDeathHeads();
+
+                if (deadHeads.Count > 0)
+                {
+                    // Sélectionner une tête aléatoire
+                    PlayerDeathHead selectedHead = deadHeads[UnityEngine.Random.Range(0, deadHeads.Count)];
+                    Debug.Log($"[RandomRevivePotion] Reviving player associated with head: {selectedHead.gameObject.name}");
+                    selectedHead.FlashEyeRPC(true);
+                    selectedHead.Revive();
+                }
+                else
+                {
+                    // Aucune tête trouvée : exécuter la logique alternative
+                    Debug.Log("[RandomRevivePotion] No PlayerDeathHead found on the map.");
+                }
+            }
+
+            private List<PlayerDeathHead> FindAllPlayerDeathHeads()
+            {
+                List<PlayerDeathHead> deadHeads = new List<PlayerDeathHead>();
+
+                // Vérifier chaque joueur dans GameDirector.PlayerList
+                if (GameDirector.instance != null && GameDirector.instance.PlayerList != null)
+                {
+                    foreach (PlayerAvatar player in GameDirector.instance.PlayerList)
+                    {
+                        if (player == null) continue;
+
+                        // Vérifier si le joueur a un PlayerDeathHead actif
+                        PlayerDeathHead deathHead = player.playerDeathHead;
+                        if (deathHead != null && deathHead.gameObject.activeInHierarchy)
+                        {
+                            deadHeads.Add(deathHead);
+                        }
+                    }
+                }
+                else
+                {
+                    Debug.LogWarning("[RevivePlayerEvent] GameDirector.instance or PlayerList is null.");
+                }
+
+                return deadHeads;
+            }
+
+            // Exemple de méthode pour la logique alternative (à remplacer par ton code)
+            private void AlternativeLogic()
+            {
+                Debug.Log("[RandomRevivePotion] Alternative logic triggered.");
+            }
+        }
+
         public class ExtractionPointHaulModifier : MonoBehaviourPunCallbacks, ISlotEvent
         {
             private bool hasModifiedHaulGoal = false;
@@ -121,10 +188,12 @@ namespace DifficultyFeature
                     return;
                 }
 
-                float modifier = UnityEngine.Random.value < 0.5f ? 1.5f : 0.5f;
+                float modifier = UnityEngine.Random.Range(0.5f, 1.5f);
                 int newHaulGoal = Mathf.RoundToInt(point.haulGoal * modifier);
 
-                Debug.Log($"[ExtractionPointHaulModifier] Modifying haulGoal from {point.haulGoal} to {newHaulGoal} ({(modifier == 1.5f ? "+50%" : "-50%")})");
+                float percentage = (modifier - 1f) * 100f;
+                string sign = percentage >= 0 ? "+" : "";
+                Debug.Log($"[ExtractionPointHaulModifier] Modifying haulGoal from {point.haulGoal} to {newHaulGoal} ({sign}{percentage:F0}%)");
 
                 oneTimeOnly = false;
                 if (SemiFunc.IsMultiplayer())

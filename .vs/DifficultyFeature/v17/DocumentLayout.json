@@ -91,7 +91,7 @@
               "RelativeDocumentMoniker": "DifficultyFeature\\Event.cs",
               "ToolTip": "C:\\Users\\skore\\source\\repos\\DifficultyFeature\\MoreDifficultyREPO\\DifficultyFeature\\Event.cs",
               "RelativeToolTip": "DifficultyFeature\\Event.cs",
-              "ViewState": "AQIAABQAAAAAAAAAAAAcwJ8EAAAYAAAA",
+              "ViewState": "AQIAAAkAAAAAAAAAAAAAwCsAAAArAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-04-06T20:03:42.387Z",
               "EditorCaption": ""
@@ -104,7 +104,7 @@
               "RelativeDocumentMoniker": "DifficultyFeature\\DifficultyFeature.cs",
               "ToolTip": "C:\\Users\\skore\\source\\repos\\DifficultyFeature\\MoreDifficultyREPO\\DifficultyFeature\\DifficultyFeature.cs",
               "RelativeToolTip": "DifficultyFeature\\DifficultyFeature.cs",
-              "ViewState": "AQIAAC4AAAAAAAAAAAAQwDkAAABDAAAA",
+              "ViewState": "AQIAABsAAAAAAAAAAAAAAEEAAABEAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-04-01T15:51:42.24Z",
               "EditorCaption": ""
@@ -131,8 +131,7 @@
               "RelativeToolTip": "DifficultyFeature\\DifficultyManager.cs",
               "ViewState": "AQIAAAAAAAAAAAAAAAAAABoAAAApAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-04-01T16:01:21.952Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-04-01T16:01:21.952Z"
             },
             {
               "$type": "Document",
@@ -144,8 +143,7 @@
               "RelativeToolTip": "DifficultyFeature\\DifficultyMenu.cs",
               "ViewState": "AQIAAAAAAAAAAAAAAAAAAAkBAAAuAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-04-01T16:01:21.385Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-04-01T16:01:21.385Z"
             },
             {
               "$type": "Document",
