@@ -35,6 +35,133 @@ namespace DifficultyFeature
 {
     internal class Event
     {
+        public class ExtractionPointHaulModifier : MonoBehaviourPunCallbacks, ISlotEvent
+        {
+            private bool hasModifiedHaulGoal = false;
+            private ExtractionPoint currentExtractionPoint = null;
+
+            public string EventName => "Extraction";
+            public string IconName => "Extraction";
+            public string Asset => "TestAsset"; // Remplacé throw par une valeur par défaut
+            public bool oneTimeOnly = true;
+
+            public void Execute()
+            {
+                // Créer un GameObject si le composant n'est pas attaché
+                if (this == null || !TryGetComponent(out MonoBehaviour _))
+                {
+                    Debug.LogWarning("[ExtractionPointHaulModifier] Component not attached. Creating new GameObject.");
+                    GameObject modifierObj = new GameObject("ExtractionPointHaulModifier");
+                    ExtractionPointHaulModifier modifier = modifierObj.AddComponent<ExtractionPointHaulModifier>();
+                    modifier.Execute(); // Appeler Execute sur la nouvelle instance
+                    return;
+                }
+
+                // Vérifier RoundDirector
+                if (RoundDirector.instance == null)
+                {
+                    Debug.LogWarning("[ExtractionPointHaulModifier] RoundDirector.instance is null. Waiting for initialization.");
+                    StartCoroutine(WaitForRoundDirector());
+                    return;
+                }
+
+                // Démarrer la vérification immédiatement
+                StartCheck();
+            }
+
+            private void StartCheck()
+            {
+                oneTimeOnly = true;
+                StartCoroutine(CheckExtractionPoints());
+            }
+
+            private IEnumerator WaitForRoundDirector()
+            {
+                while (RoundDirector.instance == null)
+                {
+                    yield return new WaitForSeconds(0.1f);
+                }
+                StartCheck();
+            }
+
+            private IEnumerator CheckExtractionPoints()
+            {
+                while (oneTimeOnly)
+                {
+                    if (RoundDirector.instance == null || RoundDirector.instance.extractionPointList == null)
+                    {
+                        Debug.LogWarning("[ExtractionPointHaulModifier] RoundDirector or extractionPointList is null. Waiting...");
+                        yield return new WaitForSeconds(0.5f);
+                        continue;
+                    }
+                    foreach (GameObject extractionPointObj in RoundDirector.instance.extractionPointList)
+                    {
+                        if (extractionPointObj == null) continue;
+
+                        ExtractionPoint point = extractionPointObj.GetComponent<ExtractionPoint>();
+                        if (point == null) continue;
+
+                        if (point.currentState == ExtractionPoint.State.Active && !hasModifiedHaulGoal)
+                        {
+                            currentExtractionPoint = point;
+                            ModifyHaulGoal(point);
+                            hasModifiedHaulGoal = true;
+                            yield break;
+                        }
+                    }
+                    yield return new WaitForSeconds(0.5f);
+                }
+            }
+
+            private void ModifyHaulGoal(ExtractionPoint point)
+            {
+                if (point == null || point.haulGoal <= 0)
+                {
+                    Debug.LogWarning("[ExtractionPointHaulModifier] Invalid haulGoal or ExtractionPoint.");
+                    return;
+                }
+
+                float modifier = UnityEngine.Random.value < 0.5f ? 1.5f : 0.5f;
+                int newHaulGoal = Mathf.RoundToInt(point.haulGoal * modifier);
+
+                Debug.Log($"[ExtractionPointHaulModifier] Modifying haulGoal from {point.haulGoal} to {newHaulGoal} ({(modifier == 1.5f ? "+50%" : "-50%")})");
+
+                oneTimeOnly = false;
+                if (SemiFunc.IsMultiplayer())
+                {
+                    if (SemiFunc.IsMasterClient())
+                    {
+                        point.photonView.RPC("HaulGoalSetRPC", RpcTarget.All, newHaulGoal);
+                    }
+                }
+                else
+                {
+                    point.haulGoal = newHaulGoal;
+                    RoundDirector.instance.extractionHaulGoal = newHaulGoal;
+                    point.haulGoalFetched = true;
+                }
+            }
+
+            private void OnEnable()
+            {
+                if (RoundDirector.instance != null && RoundDirector.instance.extractionPointActive && hasModifiedHaulGoal)
+                {
+                    ExtractionPoint newActivePoint = RoundDirector.instance.extractionPointCurrent;
+                    if (newActivePoint != null && newActivePoint != currentExtractionPoint)
+                    {
+                        Debug.Log("[ExtractionPointHaulModifier] New extraction point detected. Resetting modifier.");
+                        hasModifiedHaulGoal = false;
+                        currentExtractionPoint = null;
+                        StartCoroutine(CheckExtractionPoints());
+                    }
+                }
+            }
+
+            private void OnDisable()
+            {
+                StopAllCoroutines();
+            }
+        } // Finis marche bien (check a faire pour le multi)
 
         public class BetterWalkieTakkie : ISlotEvent
         {
