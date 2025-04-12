@@ -4,6 +4,7 @@ using HarmonyLib;
 using Photon.Pun;
 using Photon.Realtime;
 using Photon.Voice;
+using POpusCodec.Enums;
 using REPOLib.Extensions;
 using REPOLib.Modules;
 using SingularityGroup.HotReload;
@@ -27,8 +28,8 @@ using UnityEngine.Rendering;
 using UnityEngine.UI;
 using UnityEngine.UIElements;
 using UnityEngine.Video;
-using static b;
-using static DifficultyFeature.Event;
+
+
 
 namespace DifficultyFeature
 {
@@ -560,13 +561,14 @@ namespace DifficultyFeature
             }
         } //Finis Marche Bien
 
-        public class MarioStarEvent : ISlotEvent
+        public class MarioStarEvent : MonoBehaviour, ISlotEvent
         {
             public string EventName => "MarioStar";
             public string IconName => "icon_enemy_rain";
 
             public string Asset => "TestAsset";
-            public AssetBundle AssetBundle { get; set; }
+            public static AssetBundle AssetBundle { get; set; }
+            public static AudioClip starClip { get; set; }
 
             public void Execute()
             {
@@ -576,13 +578,14 @@ namespace DifficultyFeature
                 string bundlePath = Path.Combine(Paths.PluginPath, "SK0R3N-DifficultyFeature", "assets", "Mario");
                 Debug.Log($"[AlarmEffectController] Loading asset bundle from: {bundlePath}");
 
-                
                 if (AssetBundle == null)
                 {
                     AssetBundle = AssetBundle.LoadFromFile(bundlePath);
                 }
 
-                AudioClip starClip = AssetBundle.LoadAsset<AudioClip>("videoplayback");
+                if (starClip == null)
+                    starClip = AssetBundle.LoadAsset<AudioClip>("videoplayback");
+
                 if (starClip == null)
                 {
                     Debug.LogError("[AlarmEffectController] Failed to load Star.");
@@ -590,7 +593,15 @@ namespace DifficultyFeature
                 }
 
                 PlayerAvatar avatar = PlayerAvatar.instance;
-                avatar.StartCoroutine(ApplyMarioStarEffect(avatar, starClip));
+                // S'assurer que MarioStarEvent est attaché au joueur
+                var marioStarEvent = avatar.gameObject.GetComponent<MarioStarEvent>();
+                if (marioStarEvent == null)
+                {
+                    marioStarEvent = avatar.gameObject.AddComponent<MarioStarEvent>();
+                }
+
+                // Lancer la coroutine sur le composant attaché
+                avatar.StartCoroutine(marioStarEvent.ApplyMarioStarEffect(avatar, starClip));
             }
 
             private IEnumerator ApplyMarioStarEffect(PlayerAvatar avatar, AudioClip clip)
@@ -640,8 +651,11 @@ namespace DifficultyFeature
                 // 3. Audio global (réplication réseau)
                 if (PhotonNetwork.InRoom)
                 {
+                    Debug.Log("Envoie Photon");
                     PhotonView photonView = avatar.GetComponent<PhotonView>();
-                    photonView.RPC("RPC_PlayMarioStarSound", RpcTarget.Others, avatar.transform.position);
+                    object[] eventData = new object[] { photonView.ViewID }; 
+                    RaiseEventOptions raiseEventOptions = new RaiseEventOptions { Receivers = ReceiverGroup.All };
+                    PhotonNetwork.RaiseEvent(2, eventData, raiseEventOptions, SendOptions.SendReliable);
                 }
 
                 // 4. Activer l'effet de "kill au contact"
@@ -662,35 +676,33 @@ namespace DifficultyFeature
                 UnityEngine.Object.Destroy(localAudio);
                 UnityEngine.Object.Destroy(marioEffect);
                 Debug.Log("[MarioStarEvent] Star effect ended.");
+
+                // Détruire le composant MarioStarEvent
+                UnityEngine.Object.Destroy(this);
             }
 
-            [PunRPC]
-            public void RPC_PlayMarioStarSound(Vector3 position, PhotonMessageInfo info)
+            private void Update()
             {
-                // Joué pour les autres joueurs
-                string bundlePath = Path.Combine(Paths.PluginPath, "SK0R3N-DifficultyFeature", "assets", "Mario");
-                var bundle = AssetBundle.LoadFromFile(bundlePath);
-                if (bundle == null) return;
+                if (!MarioStarPower.running) return;
 
-                AudioClip starClip = bundle.LoadAsset<AudioClip>("Star");
-                if (starClip == null) return;
+                float hue = Mathf.Repeat(Time.time * 0.5f, 1f);
+                Color rainbowColor = Color.HSVToRGB(hue, 1f, 1f);
 
-                GameObject obj = new GameObject("StarSoundRemote");
-                obj.transform.position = position;
+                float intensity = Mathf.PingPong(Time.time * 5f, 1f);
 
-                AudioSource audio = obj.AddComponent<AudioSource>();
-                audio.clip = starClip;
-                audio.spatialBlend = 1f; // 3D spatial
-                audio.maxDistance = 50f;
-                audio.Play();
-
-                UnityEngine.Object.Destroy(obj, starClip.length + 1f);
+                MarioStarPower.eyeMatL.SetColor("_ColorOverlay", rainbowColor);
+                MarioStarPower.eyeMatR.SetColor("_ColorOverlay", rainbowColor);
+                MarioStarPower.eyeMatL.SetFloat("_ColorOverlayAmount", intensity);
+                MarioStarPower.eyeMatR.SetFloat("_ColorOverlayAmount", intensity);
             }
 
-            private class MarioStarPower : MonoBehaviour
+            public class MarioStarPower : MonoBehaviour
             {
                 public float duration = 5f;
                 private Collider triggerCollider;
+                public static bool running = false;
+                public static Material eyeMatL;
+                public static Material eyeMatR;
 
                 private void Start()
                 {
@@ -730,6 +742,85 @@ namespace DifficultyFeature
                         Debug.Log("[MarioStarPower] Rigidbody déjà présent.");
                     }
                 }
+
+                public static IEnumerator RPC_PlayMarioStarSound(PlayerAvatar position)
+                {
+                    Debug.Log("[RPC_PlayMarioStarSound] Début de la méthode.");
+
+                    string bundlePath = Path.Combine(Paths.PluginPath, "SK0R3N-DifficultyFeature", "assets", "Mario");
+                    Debug.Log($"[RPC_PlayMarioStarSound] Chemin de l'AssetBundle : {bundlePath}");
+
+                    if (AssetBundle == null)
+                    {
+                        Debug.Log("[RPC_PlayMarioStarSound] Chargement de l'AssetBundle...");
+                        AssetBundle = AssetBundle.LoadFromFile(bundlePath);
+                    }
+
+                    if (AssetBundle == null)
+                    {
+                        Debug.LogError("[RPC_PlayMarioStarSound] Échec du chargement de l'AssetBundle.");
+                        yield break;
+                    }
+
+                    if (starClip == null)
+                    {
+                        Debug.Log("[RPC_PlayMarioStarSound] Chargement de l'AudioClip 'videoplayback'...");
+                        starClip = AssetBundle.LoadAsset<AudioClip>("videoplayback");
+                    }
+
+                    if (starClip == null)
+                    {
+                        Debug.LogError("[RPC_PlayMarioStarSound] Échec du chargement de l'AudioClip.");
+                        yield break;
+                    }
+
+                    var marioStarEvent = position.gameObject.GetComponent<MarioStarEvent>();
+                    if (marioStarEvent == null)
+                    {
+                        marioStarEvent = position.gameObject.AddComponent<MarioStarEvent>();
+                    }
+
+                    var eyeL = position.playerAvatarVisuals.transform.Find("ANIM EYE LEFT/mesh_eye_l");
+                    var eyeR = position.playerAvatarVisuals.transform.Find("ANIM EYE RIGHT/mesh_eye_r");
+
+                    foreach (Transform t in position.playerAvatarVisuals.GetComponentsInChildren<Transform>(true))
+                    {
+                        if (t.name == "mesh_eye_r")
+                            eyeR = t;
+                        if (t.name == "mesh_eye_l")
+                            eyeL = t;
+                    }
+
+                    if (eyeR == null || eyeL == null )
+                    {
+                        Debug.LogWarning("[AlarmEffectController] One or both eyes not found.");
+                        yield break;
+                    }
+
+                    eyeMatL = eyeL.GetComponent<Renderer>().material;
+                    eyeMatR = eyeR.GetComponent<Renderer>().material;
+
+                    Debug.Log("[RPC_PlayMarioStarSound] Configuration de l'AudioSource...");
+                    AudioSource audio = position.gameObject.AddComponent<AudioSource>();
+                    audio.clip = starClip;
+                    audio.spatialBlend = 1f; // 3D spatial
+                    audio.maxDistance = 50f;
+                    audio.Play();
+
+                    running = true;
+                    Debug.Log($"[RPC_PlayMarioStarSound] Lecture de l'audio pendant {starClip.length} secondes.");
+                    yield return new WaitForSeconds(starClip.length);
+                    running = false;
+
+
+                    eyeMatL?.SetFloat("_ColorOverlayAmount", 0f);
+                    eyeMatR?.SetFloat("_ColorOverlayAmount", 0f);
+                    Debug.Log("[RPC_PlayMarioStarSound] Destruction de l'AudioSource.");
+                    UnityEngine.Object.Destroy(audio);
+                }
+
+
+
 
                 private Enemy FindEnemyRoot(Transform current)
                 {
@@ -778,7 +869,7 @@ namespace DifficultyFeature
                 }
             }
 
-        } //Finis (Possible bug : étoile juste une fois par jeu lancé)
+        } //Finis 
 
         public class NoMinimap : ISlotEvent
         {
@@ -1002,7 +1093,7 @@ namespace DifficultyFeature
             }
 
             // Le reste de la classe AlarmEffectController reste inchangé pour l'instant
-            private class AlarmEffectController : MonoBehaviour
+            public class AlarmEffectController : MonoBehaviour
             {
                 public float duration = 3f;
                 public AudioClip alarmClip;
@@ -1017,7 +1108,6 @@ namespace DifficultyFeature
                 public static void Trigger(PlayerAvatar avatar, float duration)
                 {
                     Debug.Log("[AlarmEffectController] Trigger called.");
-
 
                     var controller = avatar.gameObject.AddComponent<AlarmEffectController>();
                     controller.duration = duration;
@@ -1036,8 +1126,8 @@ namespace DifficultyFeature
                         return;
                     }
 
-                    if(controller.alarmClip == null)
-                    controller.alarmClip = bundle.LoadAsset<AudioClip>("alarm_event");
+                    if (controller.alarmClip == null)
+                        controller.alarmClip = bundle.LoadAsset<AudioClip>("alarm_event");
 
                     if (controller.alarmClip == null)
                     {
@@ -1067,8 +1157,6 @@ namespace DifficultyFeature
                     audioSource.Play();
 
                     Debug.Log("[AlarmEffectController] Alarm sound started.");
-
-
                     Debug.Log("[AlarmEffectController] Enemies alerted by alarm.");
                 }
 
@@ -1150,61 +1238,8 @@ namespace DifficultyFeature
                     Debug.Log("[AlarmEffectController] Alarm effect stopped. Cleaning up.");
                     Destroy(this);
                 }
-
-                public class AlarmEventHandler : MonoBehaviour, IOnEventCallback 
-                {
-                    private const byte ALARM_EVENT_CODE = 1;
-
-                    private void Awake()
-                    {
-                        Debug.Log("[AlarmEventHandler] Initialized and waiting for events.");
-                    }
-
-                    public void OnEnable() 
-                    {
-                        PhotonNetwork.AddCallbackTarget(this); // S’enregistrer pour recevoir les événements
-                    }
-
-                    public void OnDisable() 
-                    {
-                        PhotonNetwork.RemoveCallbackTarget(this); 
-                    }
-
-                    public void OnEvent(EventData photonEvent) 
-                    {
-                        if (photonEvent.Code != ALARM_EVENT_CODE) return; 
-
-                        object[] data = (object[])photonEvent.CustomData;
-                        if (data == null || data.Length < 2)
-                        {
-                            Debug.LogError("[AlarmEventHandler] Invalid event data received.");
-                            return;
-                        }
-
-                        int viewId = (int)data[0];
-                        float duration = (float)data[1];
-
-                        PhotonView photonView = PhotonView.Find(viewId);
-                        if (photonView == null)
-                        {
-                            Debug.LogError($"[AlarmEventHandler] ViewID {viewId} not found.");
-                            return;
-                        }
-
-                        GameObject target = photonView.gameObject;
-                        PlayerAvatar avatar = target.GetComponent<PlayerAvatar>();
-                        if (avatar == null)
-                        {
-                            Debug.LogError("[AlarmEventHandler] No PlayerAvatar on target object.");
-                            return;
-                        }
-
-                        Debug.Log($"[AlarmEventHandler] Event received for ViewID {viewId}, Duration: {duration}");
-                        AlarmEvent.AlarmEffectController.Trigger(avatar, duration);
-                    }
-                }
             }
-        }//Vérification si il fonctionne toujours
+        }//Fonctionne Bien
     }
 
 }

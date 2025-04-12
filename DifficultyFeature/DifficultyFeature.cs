@@ -60,7 +60,8 @@ namespace DifficultyFeature
             //SlotEventManager.RegisterEvent(new TimeSlowEvent());
             //SlotEventManager.RegisterEvent(new SurviveHorror());
             //SlotEventManager.RegisterEvent(new BetterWalkieTakkie());
-            SlotEventManager.RegisterEvent(new AlarmEvent());
+            //SlotEventManager.RegisterEvent(new AlarmEvent());
+            SlotEventManager.RegisterEvent(new MarioStarEvent());
             string bundlePath = Path.Combine(Paths.PluginPath, "SK0R3N-DifficultyFeature", "assets", "video");
             AssetBundle bundle = AssetBundle.LoadFromFile(bundlePath);
             request1 = bundle.LoadAssetAsync<VideoClip>("Clash");
@@ -193,6 +194,72 @@ namespace DifficultyFeature
                         Debug.Log($"[WalkieNet] Walkie state updated: ViewID {viewID} -> {(enabled ? "ON" : "OFF")}");
                     }
                     break;
+
+                case 1:
+                        Debug.Log($"[AlarmEventHandler] Event received with code: {photonEvent.Code}");
+
+                        if (photonEvent.Code != 1) return;
+
+                        object[] data = (object[])photonEvent.CustomData;
+                        if (data == null || data.Length < 2)
+                        {
+                            Debug.LogError("[AlarmEventHandler] Invalid event data received.");
+                            return;
+                        }
+
+                        int viewId = (int)data[0];
+                        float duration = (float)data[1];
+
+                        PhotonView photonView = PhotonView.Find(viewId);
+                        if (photonView == null)
+                        {
+                            Debug.LogError($"[AlarmEventHandler] ViewID {viewId} not found.");
+                            return;
+                        }
+
+                        GameObject target = photonView.gameObject;
+                        PlayerAvatar avatar = target.GetComponent<PlayerAvatar>();
+                        if (avatar == null)
+                        {
+                            Debug.LogError("[AlarmEventHandler] No PlayerAvatar on target object.");
+                            return;
+                        }
+
+                        Debug.Log($"[AlarmEventHandler] Event processed for ViewID {viewId}, Duration: {duration}");
+                        AlarmEvent.AlarmEffectController.Trigger(avatar, duration);
+                        break;
+                case 2:
+                    object[] data3 = (object[])photonEvent.CustomData;
+
+                    if (data3 == null || data3.Length < 1)
+                    {
+                        Debug.LogError("[AlarmEventHandler] Invalid event data received.");
+                        return;
+                    }
+
+                    int viewIdMario = (int)data3[0];
+                    PhotonView photonViewMario = PhotonView.Find(viewIdMario);
+                    if (photonViewMario == null)
+                    {
+                        Debug.LogError($"[AlarmEventHandler] ViewID {viewIdMario} not found.");
+                        return;
+                    }
+
+                    GameObject targetMario = photonViewMario.gameObject;
+                    PlayerAvatar avatarMario = targetMario.GetComponent<PlayerAvatar>();
+
+                    if (avatarMario == null)
+                    {
+                        Debug.LogError("[AlarmEventHandler] No PlayerAvatar on target object.");
+                        return;
+                    }
+
+                    // Démarrer la coroutine sur le GameObject du joueur
+                    Debug.Log("[AlarmEventHandler] Starting RPC_PlayMarioStarSound coroutine.");
+                    avatarMario.StartCoroutine(MarioStarEvent.MarioStarPower.RPC_PlayMarioStarSound(avatarMario));
+                    break;
+
+
             }
         }
 
