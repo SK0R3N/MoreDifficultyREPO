@@ -64,7 +64,8 @@ namespace DifficultyFeature
             //SlotEventManager.RegisterEvent(new MarioStarEvent());
             //SlotEventManager.RegisterEvent(new ExtractionPointHaulModifier());
             //SlotEventManager.RegisterEvent(new RevivePlayerEvent());
-            SlotEventManager.RegisterEvent(new ExplosiveDeathEvent());
+            //SlotEventManager.RegisterEvent(new ExplosiveDeathEvent());
+            SlotEventManager.RegisterEvent(new TinyPlayerEvent());
             string bundlePath = Path.Combine(Paths.PluginPath, "SK0R3N-DifficultyFeature", "assets", "video");
             AssetBundle bundle = AssetBundle.LoadFromFile(bundlePath);
             request1 = bundle.LoadAssetAsync<VideoClip>("Clash");
@@ -260,6 +261,36 @@ namespace DifficultyFeature
                     // Démarrer la coroutine sur le GameObject du joueur
                     Debug.Log("[AlarmEventHandler] Starting RPC_PlayMarioStarSound coroutine.");
                     avatarMario.StartCoroutine(MarioStarEvent.MarioStarPower.RPC_PlayMarioStarSound(avatarMario));
+                    break;
+                case 3:
+                    object[] data4 = (object[])photonEvent.CustomData;
+
+                    if (data4 == null || data4.Length < 1)
+                    {
+                        Debug.LogError("[AlarmEventHandler] Invalid event data received.");
+                        return;
+                    }
+
+                    int viewIdTiny = (int)data4[0];
+                    PhotonView photonViewTiny = PhotonView.Find(viewIdTiny);
+                    if (photonViewTiny == null)
+                    {
+                        Debug.LogError($"[AlarmEventHandler] ViewID {viewIdTiny} not found.");
+                        return;
+                    }
+
+                    GameObject targetTiny = photonViewTiny.gameObject;
+                    PlayerAvatar avatarTiny = targetTiny.GetComponent<PlayerAvatar>();
+
+                    if (avatarTiny == null)
+                    {
+                        Debug.LogError("[AlarmEventHandler] No PlayerAvatar on target object.");
+                        return;
+                    }
+
+                    // Démarrer la coroutine sur le GameObject du joueur
+                    Debug.Log("[AlarmEventHandler] Starting RPC_PlayMarioStarSound coroutine.");
+                    avatarTiny.StartCoroutine(TinyPlayerEvent.TinyPlayerManager.ApplyTinyEffectRPC(avatarTiny));
                     break;
 
 

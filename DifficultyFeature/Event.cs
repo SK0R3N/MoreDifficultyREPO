@@ -36,6 +36,250 @@ namespace DifficultyFeature
 {
     internal class Event
     {
+        public class TinyPlayerEvent : MonoBehaviour, ISlotEvent
+        {
+            public string EventName => "TinyPlayer";
+            public string IconName => "icon_tiny_player";
+            public string Asset => "TinyPlayerAsset";
+
+            private static bool isActive = false;
+            private static float duration = 60f; // Durée de l'effet : 60 secondes
+            private static float scaleFactor = 0.2f; // Taille réduite
+            private static float jumpMultiplier = 3f; // Sauts 3x plus hauts
+            private static float voicePitch = 1.5f; // Voix plus aiguë
+            private static float cameraOffsetY = -0.8f; // Décalage caméra pour joueurs minuscules
+            private static float checkInterval = 0.1f;
+
+
+                private void Awake()
+            {
+                DontDestroyOnLoad(gameObject);
+                Debug.Log("[TinyPlayerEvent] Initialized.");
+            }
+
+            public void Execute()
+            {
+                if (isActive)
+                {
+                    Debug.Log("[TinyPlayerEvent] Already active.");
+                    return;
+                }
+
+                if (GameDirector.instance == null || GameDirector.instance.PlayerList == null)
+                {
+                    Debug.LogError("[TinyPlayerEvent] GameDirector or PlayerList is null.");
+                    return;
+                }
+
+                isActive = true;
+                GameObject managerObj = new GameObject("TinyPlayerManager");
+                var manager = managerObj.AddComponent<TinyPlayerManager>();
+                manager.Initialize(this, duration);
+                Debug.Log($"[TinyPlayerEvent] Started for {duration} seconds.");
+            }
+
+            public class TinyPlayerManager : MonoBehaviour
+            {
+                private TinyPlayerEvent parentEvent;
+                private PhotonView photonView;
+                private static AudioClip tinySound;
+                public static AssetBundle AssetBundle { get; set; }
+
+                public void Initialize(TinyPlayerEvent parent, float duration)
+                {
+                    parentEvent = parent;
+                    DontDestroyOnLoad(gameObject);
+
+                    if (SemiFunc.IsMultiplayer())
+                    {
+                        photonView = gameObject.AddComponent<PhotonView>();
+                        photonView.ViewID = PhotonNetwork.AllocateViewID(true);
+                        Debug.Log($"[TinyPlayerEvent] PhotonView ID: {photonView.ViewID}");
+                    }
+
+                    // Appliquer l'effet à tous les joueurs
+                    ApplyTinyEffectToAll(PlayerAvatar.instance);
+                    StartCoroutine(ManageEvent(duration));
+                }
+
+                private void ApplyTinyEffectToAll(PlayerAvatar avatar)
+                {
+                    if (SemiFunc.IsMultiplayer())
+                    {
+                        if (photonView != null && photonView.IsMine)
+                        {
+                            if (PhotonNetwork.InRoom)
+                            {
+                                PhotonView photonView = avatar.GetComponent<PhotonView>();
+                                object[] eventData = new object[] { photonView.ViewID };
+                                RaiseEventOptions raiseEventOptions = new RaiseEventOptions { Receivers = ReceiverGroup.All };
+                                PhotonNetwork.RaiseEvent(3, eventData, raiseEventOptions, SendOptions.SendReliable);
+                            }
+                        }
+                        else
+                        {
+                            ApplyTinyEffectRPC(avatar);
+                        }
+                    }
+                }
+                [PunRPC]
+                public static IEnumerator ApplyTinyEffectRPC(PlayerAvatar avatar)
+                {
+
+                    string bundlePath = Path.Combine(Paths.PluginPath, "SK0R3N-DifficultyFeature", "assets", "Mario");
+                    if (AssetBundle == null)
+                    {
+                        AssetBundle = AssetBundle.LoadFromFile(bundlePath);
+                    }
+
+                    if (tinySound == null)
+                        tinySound = AssetBundle.LoadAsset<AudioClip>("tinymushroom");
+
+                    foreach (PlayerAvatar player in GameDirector.instance.PlayerList)
+                    {
+                        if (player == null || player.isDisabled || player.deadSet)
+                        {
+                            Debug.Log($"[TinyPlayerEvent] Skipping player {player?.playerName} (null, disabled, or dead).");
+                            continue;
+                        }
+
+                        // Réduire la taille
+
+                        // Jouer le son
+                        if (tinySound != null)
+                        {
+                            AudioSource localAudio = avatar.gameObject.AddComponent<AudioSource>();
+                            localAudio.clip = tinySound;
+                            localAudio.spatialBlend = 1f;
+                            localAudio.loop = false;
+                            localAudio.Play();
+                            Debug.Log($"[TinyPlayerEvent] Played 'tinymushroom' for {player.playerName}");
+                        }
+
+                        // Modifier la voix
+                        if (player.voiceChat != null)
+                        {
+                            player.voiceChat.OverridePitch(1.5f, 1f, 2f, duration);
+                            Debug.Log($"[TinyPlayerEvent] Set voice pitch to {voicePitch} for {player.playerName}");
+                        }
+
+                        // Augmenter les sauts (stocké dans une variable temporaire)
+                        player.gameObject.AddComponent<TinyJumpModifier>().Initialize(jumpMultiplier);
+
+                        int i = 0;
+                        while (i < 10)
+                        {
+                            i++;
+                            player.playerTransform.localScale = Vector3.one * scaleFactor;
+                            if (player.playerAvatarVisuals != null)
+                            {
+                                player.playerAvatarVisuals.transform.localScale = Vector3.one * scaleFactor;
+                            }
+
+                            // Ajuster la caméra
+                            if (player.isLocal)
+                            {
+                                player.localCameraTransform.localPosition += Vector3.up * cameraOffsetY;
+                                Debug.Log($"[TinyPlayerEvent] Adjusted camera for {player.playerName} to {player.localCameraTransform.localPosition}");
+                            }
+                        }
+                        yield return null;
+                    }
+                }
+
+                private void RevertTinyEffectToAll()
+                {
+                    if (SemiFunc.IsMultiplayer())
+                    {
+                        if (photonView != null && photonView.IsMine)
+                        {
+                            photonView.RPC("RevertTinyEffectRPC", RpcTarget.All);
+                        }
+                    }
+                    else
+                    {
+                        RevertTinyEffectRPC();
+                    }
+                }
+
+                [PunRPC]
+                private void RevertTinyEffectRPC()
+                {
+                    foreach (PlayerAvatar player in GameDirector.instance.PlayerList)
+                    {
+                        if (player == null || player.isDisabled || player.deadSet)
+                        {
+                            continue;
+                        }
+
+                        // Restaurer la taille
+                        player.playerTransform.localScale = Vector3.one;
+                        if (player.playerAvatarVisuals != null)
+                        {
+                            player.playerAvatarVisuals.transform.localScale = Vector3.one;
+                        }
+
+                        // Restaurer la caméra
+                        if (player.isLocal)
+                        {
+                            player.localCameraTransform.localPosition -= Vector3.up * cameraOffsetY;
+                            Debug.Log($"[TinyPlayerEvent] Restored camera for {player.playerName}");
+                        }
+
+                        // Restaurer la voix
+                        if (player.voiceChat != null)
+                        {
+                            player.voiceChat.OverridePitchCancel();
+                            Debug.Log($"[TinyPlayerEvent] Restored voice for {player.playerName}");
+                        }
+
+                        // Supprimer le modificateur de saut
+                        TinyJumpModifier modifier = player.GetComponent<TinyJumpModifier>();
+                        if (modifier != null)
+                        {
+                            Destroy(modifier);
+                        }
+                    }
+                }
+
+                private IEnumerator ManageEvent(float duration)
+                {
+                    yield return new WaitForSeconds(duration);
+
+                    RevertTinyEffectToAll();
+                    isActive = false;
+                    Debug.Log("[TinyPlayerEvent] Ended.");
+                    Destroy(gameObject);
+                }
+            }
+
+            // Composant temporaire pour gérer les sauts
+            private class TinyJumpModifier : MonoBehaviour
+            {
+                private float jumpMultiplier;
+
+                public void Initialize(float multiplier)
+                {
+                    jumpMultiplier = multiplier;
+                }
+
+                private void OnEnable()
+                {
+                    PlayerAvatar player = GetComponent<PlayerAvatar>();
+                    if (player != null)
+                    {
+                        Debug.Log($"[TinyPlayerEvent] Jump modifier added for {player.playerName}");
+                    }
+                }
+
+                // Appelé via reflection ou patching dans Jump, si nécessaire
+                public float GetJumpMultiplier()
+                {
+                    return jumpMultiplier;
+                }
+            }
+        }
+
         public class ExplosiveDeathEvent : MonoBehaviour, ISlotEvent
         {
             public string EventName => "ExplosiveDeath";
@@ -264,8 +508,7 @@ namespace DifficultyFeature
                 }
             }
 
-        }
-
+        }//Finis (test a faire)
 
         public class RevivePlayerEvent : ISlotEvent
         {
@@ -1246,9 +1489,6 @@ namespace DifficultyFeature
                     Debug.Log("[RPC_PlayMarioStarSound] Destruction de l'AudioSource.");
                     UnityEngine.Object.Destroy(audio);
                 }
-
-
-
 
                 private Enemy FindEnemyRoot(Transform current)
                 {
