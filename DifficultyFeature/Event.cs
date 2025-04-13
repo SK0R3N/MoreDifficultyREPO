@@ -1,4 +1,5 @@
-﻿using BepInEx;
+﻿using Audial.Utils;
+using BepInEx;
 using ExitGames.Client.Photon;
 using HarmonyLib;
 using Photon.Pun;
@@ -35,6 +36,237 @@ namespace DifficultyFeature
 {
     internal class Event
     {
+        public class ExplosiveDeathEvent : MonoBehaviour, ISlotEvent
+        {
+            public string EventName => "ExplosiveDeath";
+            public string IconName => "icon_explosive_death";
+            public string Asset => "ExplosiveDeathAsset";
+
+            [SerializeField]
+            private GameObject explosionPrefab; // Prefab d'explosion assigné dans l'Inspector
+            private static bool isExplosiveDeathActive = false;
+            private static float effectDuration = 180f; // Durée de l'effet (3 minutes)
+            private static float checkInterval = 0.1f; // Intervalle de vérification des ennemis
+
+            private void Awake()
+            {
+                DontDestroyOnLoad(gameObject);
+                Debug.Log("[ExplosiveDeathEvent] Initialized and set to DontDestroyOnLoad.");
+            }
+
+            public void Execute()
+            {
+                if (isExplosiveDeathActive)
+                {
+                    Debug.LogWarning("[ExplosiveDeathEvent] Explosive death event is already active. Ignoring.");
+                    return;
+                }
+
+                if (EnemyDirector.instance == null)
+                {
+                    Debug.LogWarning("[ExplosiveDeathEvent] EnemyDirector.instance is null. Cannot execute.");
+                    return;
+                }
+
+                Debug.Log($"[ExplosiveDeathEvent] Starting explosive death event for {effectDuration} seconds.");
+                isExplosiveDeathActive = true;
+                GameObject managerObj = new GameObject("ExplosiveDeathManager");
+                var manager = managerObj.AddComponent<ExplosiveDeathManager>();
+                manager.Initialize(this, effectDuration);
+            }
+
+            private class ExplosiveDeathManager : MonoBehaviour
+            {
+                private ExplosiveDeathEvent parentEvent;
+                private PhotonView photonView;
+                private HashSet<EnemyParent> deadEnemies = new HashSet<EnemyParent>(); // Suivre les ennemis déjà morts
+                private HashSet<Vector3> explosionPositions = new HashSet<Vector3>(); // Éviter les doublons d'explosions
+
+                public void Initialize(ExplosiveDeathEvent parent, float duration)
+                {
+                    parentEvent = parent;
+                    DontDestroyOnLoad(gameObject);
+                    Debug.Log("[ExplosiveDeathEvent] Manager initialized.");
+
+                    if (SemiFunc.IsMultiplayer())
+                    {
+                        photonView = gameObject.AddComponent<PhotonView>();
+                        photonView.ViewID = PhotonNetwork.AllocateViewID(true);
+                        Debug.Log($"[ExplosiveDeathEvent] Assigned PhotonView ID: {photonView.ViewID}");
+                    }
+
+                    StartCoroutine(MonitorEnemies(duration));
+                }
+
+                private IEnumerator MonitorEnemies(float duration)
+                {
+                    Debug.Log("[ExplosiveDeathEvent] Monitoring enemies started.");
+
+                    float elapsed = 0f;
+                    while (elapsed < duration && isExplosiveDeathActive)
+                    {
+                        if (EnemyDirector.instance == null || EnemyDirector.instance.enemiesSpawned == null)
+                        {
+                            Debug.LogWarning("[ExplosiveDeathEvent] EnemyDirector or enemiesSpawned is null. Waiting...");
+                            yield return new WaitForSeconds(checkInterval);
+                            elapsed += checkInterval;
+                            continue;
+                        }
+
+                        foreach (EnemyParent enemyParent in EnemyDirector.instance.enemiesSpawned)
+                        {
+                            if (enemyParent == null || enemyParent.Enemy == null || enemyParent.Enemy.gameObject == null)
+                            {
+                                continue;
+                            }
+
+                            if (deadEnemies.Contains(enemyParent))
+                            {
+                                continue; // Déjà traité
+                            }
+
+                            if (enemyParent.Enemy.HasHealth && enemyParent.Enemy.Health != null && enemyParent.Enemy.Health.healthCurrent <= 0)
+                            {
+                                deadEnemies.Add(enemyParent);
+                                TriggerExplosion(enemyParent);
+                            }
+                        }
+
+                        yield return new WaitForSeconds(checkInterval);
+                        elapsed += checkInterval;
+                    }
+
+                    isExplosiveDeathActive = false;
+                    deadEnemies.Clear();
+                    explosionPositions.Clear();
+                    Debug.Log("[ExplosiveDeathEvent] Monitoring ended. Cleaning up.");
+                    Destroy(gameObject);
+                }
+
+                private void TriggerExplosion(EnemyParent enemyParent)
+                {
+                    string enemyName = enemyParent.Enemy.gameObject.name;
+                    Vector3 position = enemyParent.Enemy.CenterTransform != null
+                        ? enemyParent.Enemy.CenterTransform.position
+                        : enemyParent.Enemy.transform.position;
+
+                    // Arrondir la position pour éviter les micro-variations
+                    Vector3 roundedPosition = new Vector3(
+                        Mathf.Round(position.x * 1000f) / 1000f,
+                        Mathf.Round(position.y * 1000f) / 1000f,
+                        Mathf.Round(position.z * 1000f) / 1000f);
+
+                    if (explosionPositions.Contains(roundedPosition))
+                    {
+                        Debug.Log($"[ExplosiveDeathEvent] Explosion already triggered at {roundedPosition} for {enemyName}. Skipping.");
+                        return;
+                    }
+                    explosionPositions.Add(roundedPosition);
+
+                    Debug.Log($"[ExplosiveDeathEvent] Triggering explosion for {enemyName} at {position}");
+
+                    if (SemiFunc.IsMultiplayer())
+                    {
+                        if (photonView != null && photonView.IsMine)
+                        {
+                            photonView.RPC("ExplodeAtPosition", RpcTarget.All, position);
+                        }
+                        else
+                        {
+                            Debug.LogWarning($"[ExplosiveDeathEvent] PhotonView is null or not owned for {enemyName}.");
+                        }
+                    }
+                    else
+                    {
+                        CreateExplosion(position, enemyName);
+                    }
+                }
+
+                private void CreateExplosion(Vector3 position, string sourceName)
+                {
+                    try
+                    {
+                        if (parentEvent.explosionPrefab == null)
+                        {
+                            Debug.LogWarning($"[ExplosiveDeathEvent] Explosion prefab is null for {sourceName}. Attempting fallback.");
+                            GameObject fallbackPrefab = Resources.Load<GameObject>("Effects/Part Prefab Explosion");
+                            if (fallbackPrefab == null)
+                            {
+                                Debug.LogError($"[ExplosiveDeathEvent] Failed to load fallback prefab for {sourceName}. Skipping explosion.");
+                                return;
+                            }
+                            parentEvent.explosionPrefab = fallbackPrefab;
+                        }
+
+                        GameObject explosionObj = Instantiate(parentEvent.explosionPrefab, position, Quaternion.identity);
+                        Debug.Log($"[ExplosiveDeathEvent] Instantiated explosion for {sourceName} at {position}: {explosionObj.name}");
+
+                        ParticleScriptExplosion explosionScript = explosionObj.GetComponent<ParticleScriptExplosion>();
+                        if (explosionScript != null)
+                        {
+                            // S'assurer que l'explosionPreset est assigné
+                            if (explosionScript.explosionPreset == null)
+                            {
+                                ExplosionPreset preset = Resources.Load<ExplosionPreset>("Explosions/ExplosionPreset");
+                                if (preset == null)
+                                {
+                                    preset = ScriptableObject.CreateInstance<ExplosionPreset>();
+                                    preset.explosionForceMultiplier = 1f;
+                                    preset.explosionColors = new Gradient();
+                                    preset.smokeColors = new Gradient();
+                                    preset.lightColor = new Gradient();
+                                    Debug.Log($"[ExplosiveDeathEvent] Created temporary ExplosionPreset for {sourceName}");
+                                }
+                                explosionScript.explosionPreset = preset;
+                            }
+
+                            ParticlePrefabExplosion particleEffect = explosionScript.Spawn(position, 1f, 10, 25, 2f, false, false, 1f);
+                            if (particleEffect != null)
+                            {
+                                Debug.Log($"[ExplosiveDeathEvent] Spawned particle effect for {sourceName}: {particleEffect.gameObject.name}");
+                                Destroy(particleEffect.gameObject, 2f); // Détruire l'effet après 2 secondes
+                            }
+                            else
+                            {
+                                Debug.LogWarning($"[ExplosiveDeathEvent] Failed to spawn particle effect for {sourceName}.");
+                            }
+                        }
+                        else
+                        {
+                            Debug.LogWarning($"[ExplosiveDeathEvent] No ParticleScriptExplosion on prefab for {sourceName}.");
+                        }
+
+                        Destroy(explosionObj, 2f); // Détruire l'objet principal après 2 secondes
+                    }
+                    catch (System.Exception ex)
+                    {
+                        Debug.LogWarning($"[ExplosiveDeathEvent] Error creating explosion for {sourceName}: {ex.Message}");
+                    }
+                }
+
+                [PunRPC]
+                private void ExplodeAtPosition(Vector3 position)
+                {
+                    Vector3 roundedPosition = new Vector3(
+                        Mathf.Round(position.x * 1000f) / 1000f,
+                        Mathf.Round(position.y * 1000f) / 1000f,
+                        Mathf.Round(position.z * 1000f) / 1000f);
+
+                    //if (explosionPositions.Contains(roundedPosition))
+                    //{
+                    //    Debug.Log($"[ExplosiveDeathEvent] RPC explosion already processed at {roundedPosition}. Skipping.");
+                    //    return;
+                    //}
+                    explosionPositions.Add(roundedPosition);
+
+                    Debug.Log($"[ExplosiveDeathEvent] RPC explosion triggered at {position}");
+                    CreateExplosion(position, "RPC Explosion");
+                }
+            }
+
+        }
+
+
         public class RevivePlayerEvent : ISlotEvent
         {
             public string EventName => "Revive";
@@ -100,7 +332,7 @@ namespace DifficultyFeature
             {
                 Debug.Log("[RandomRevivePotion] Alternative logic triggered.");
             }
-        }
+        } //Finis Marche bien
 
         public class ExtractionPointHaulModifier : MonoBehaviourPunCallbacks, ISlotEvent
         {

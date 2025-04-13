@@ -111,7 +111,7 @@ public class SlotMachineUI : SemiUI
         {
             Debug.Log(e.EventName);
             var icon = SlotEventManager.GetIconForEvent(e.EventName);
-            e.Execute();
+            e.Execute(); //ligne 114
         }
 
         // 4. Extinction
