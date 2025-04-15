@@ -3,24 +3,24 @@
   "WorkspaceRootPath": "C:\\Users\\skore\\source\\repos\\DifficultyFeature\\MoreDifficultyREPO\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{7ED0D3A0-55BD-4783-B257-CD428C629B38}|DifficultyFeature\\DifficultyFeature.csproj|c:\\users\\skore\\source\\repos\\difficultyfeature\\moredifficultyrepo\\difficultyfeature\\event.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{7ED0D3A0-55BD-4783-B257-CD428C629B38}|DifficultyFeature\\DifficultyFeature.csproj|solutionrelative:difficultyfeature\\event.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{7ED0D3A0-55BD-4783-B257-CD428C629B38}|DifficultyFeature\\DifficultyFeature.csproj|c:\\users\\skore\\source\\repos\\difficultyfeature\\moredifficultyrepo\\difficultyfeature\\difficultyfeature.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{7ED0D3A0-55BD-4783-B257-CD428C629B38}|DifficultyFeature\\DifficultyFeature.csproj|solutionrelative:difficultyfeature\\difficultyfeature.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{7ED0D3A0-55BD-4783-B257-CD428C629B38}|DifficultyFeature\\DifficultyFeature.csproj|c:\\users\\skore\\source\\repos\\difficultyfeature\\moredifficultyrepo\\difficultyfeature\\difficultymenu.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{7ED0D3A0-55BD-4783-B257-CD428C629B38}|DifficultyFeature\\DifficultyFeature.csproj|solutionrelative:difficultyfeature\\difficultymenu.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{7ED0D3A0-55BD-4783-B257-CD428C629B38}|DifficultyFeature\\DifficultyFeature.csproj|c:\\users\\skore\\source\\repos\\difficultyfeature\\moredifficultyrepo\\difficultyfeature\\difficultymanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{7ED0D3A0-55BD-4783-B257-CD428C629B38}|DifficultyFeature\\DifficultyFeature.csproj|solutionrelative:difficultyfeature\\difficultymanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{7ED0D3A0-55BD-4783-B257-CD428C629B38}|DifficultyFeature\\DifficultyFeature.csproj|c:\\users\\skore\\source\\repos\\difficultyfeature\\moredifficultyrepo\\difficultyfeature\\difficultymenu.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{7ED0D3A0-55BD-4783-B257-CD428C629B38}|DifficultyFeature\\DifficultyFeature.csproj|solutionrelative:difficultyfeature\\difficultymenu.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{7ED0D3A0-55BD-4783-B257-CD428C629B38}|DifficultyFeature\\DifficultyFeature.csproj|c:\\users\\skore\\source\\repos\\difficultyfeature\\moredifficultyrepo\\difficultyfeature\\eventhandler.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{7ED0D3A0-55BD-4783-B257-CD428C629B38}|DifficultyFeature\\DifficultyFeature.csproj|solutionrelative:difficultyfeature\\eventhandler.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{7ED0D3A0-55BD-4783-B257-CD428C629B38}|DifficultyFeature\\DifficultyFeature.csproj|c:\\users\\skore\\source\\repos\\difficultyfeature\\moredifficultyrepo\\difficultyfeature\\event.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{7ED0D3A0-55BD-4783-B257-CD428C629B38}|DifficultyFeature\\DifficultyFeature.csproj|solutionrelative:difficultyfeature\\event.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{7ED0D3A0-55BD-4783-B257-CD428C629B38}|DifficultyFeature\\DifficultyFeature.csproj|c:\\users\\skore\\source\\repos\\difficultyfeature\\moredifficultyrepo\\difficultyfeature\\difficultyfeature.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{7ED0D3A0-55BD-4783-B257-CD428C629B38}|DifficultyFeature\\DifficultyFeature.csproj|solutionrelative:difficultyfeature\\difficultyfeature.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{7ED0D3A0-55BD-4783-B257-CD428C629B38}|DifficultyFeature\\DifficultyFeature.csproj|c:\\users\\skore\\source\\repos\\difficultyfeature\\moredifficultyrepo\\difficultyfeature\\slotmachineui.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -42,24 +42,24 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 3,
+          "SelectedChildIndex": 0,
           "Children": [
             {
               "$type": "Document",
-              "DocumentIndex": 3,
+              "DocumentIndex": 0,
               "Title": "DifficultyMenu.cs",
               "DocumentMoniker": "C:\\Users\\skore\\source\\repos\\DifficultyFeature\\MoreDifficultyREPO\\DifficultyFeature\\DifficultyMenu.cs",
               "RelativeDocumentMoniker": "DifficultyFeature\\DifficultyMenu.cs",
               "ToolTip": "C:\\Users\\skore\\source\\repos\\DifficultyFeature\\MoreDifficultyREPO\\DifficultyFeature\\DifficultyMenu.cs",
               "RelativeToolTip": "DifficultyFeature\\DifficultyMenu.cs",
-              "ViewState": "AQIAACEAAAAAAAAAAAAAAAAAAAAAAAAA",
+              "ViewState": "AQIAAJMAAAAAAAAAAAAAAAMAAAAAAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-04-12T22:57:23.884Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 1,
               "Title": "DifficultyManager.cs",
               "DocumentMoniker": "C:\\Users\\skore\\source\\repos\\DifficultyFeature\\MoreDifficultyREPO\\DifficultyFeature\\DifficultyManager.cs",
               "RelativeDocumentMoniker": "DifficultyFeature\\DifficultyManager.cs",
@@ -72,7 +72,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 4,
               "Title": "DifficultyFeature.cs",
               "DocumentMoniker": "C:\\Users\\skore\\source\\repos\\DifficultyFeature\\MoreDifficultyREPO\\DifficultyFeature\\DifficultyFeature.cs",
               "RelativeDocumentMoniker": "DifficultyFeature\\DifficultyFeature.cs",
@@ -80,18 +80,17 @@
               "RelativeToolTip": "DifficultyFeature\\DifficultyFeature.cs",
               "ViewState": "AQIAAC0AAAAAAAAAAAAAADwAAAAMAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-04-12T22:51:18.732Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-04-12T22:51:18.732Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 3,
               "Title": "Event.cs",
               "DocumentMoniker": "C:\\Users\\skore\\source\\repos\\DifficultyFeature\\MoreDifficultyREPO\\DifficultyFeature\\Event.cs",
               "RelativeDocumentMoniker": "DifficultyFeature\\Event.cs",
               "ToolTip": "C:\\Users\\skore\\source\\repos\\DifficultyFeature\\MoreDifficultyREPO\\DifficultyFeature\\Event.cs",
               "RelativeToolTip": "DifficultyFeature\\Event.cs",
-              "ViewState": "AQIAABsAAAAAAAAAAAAUwGUBAAA/AAAA",
+              "ViewState": "AQIAAAAAAAAAAAAAAAAAAGUBAAA/AAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-04-06T20:03:42.387Z",
               "EditorCaption": ""
@@ -110,7 +109,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 4,
+              "DocumentIndex": 2,
               "Title": "EventHandler.cs",
               "DocumentMoniker": "C:\\Users\\skore\\source\\repos\\DifficultyFeature\\MoreDifficultyREPO\\DifficultyFeature\\EventHandler.cs",
               "RelativeDocumentMoniker": "DifficultyFeature\\EventHandler.cs",
@@ -131,8 +130,7 @@
               "RelativeToolTip": "DifficultyFeature\\SlotMachineUI.cs",
               "ViewState": "AQIAAAAAAAAAAAAAAAAAAH8AAAAAAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-04-12T23:02:30.501Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-04-12T23:02:30.501Z"
             },
             {
               "$type": "Document",
@@ -144,8 +142,7 @@
               "RelativeToolTip": "DifficultyFeature\\WalkieManager.cs",
               "ViewState": "AQIAAAAAAAAAAAAAAAAAAJUAAABkAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-04-10T03:07:01.428Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-04-10T03:07:01.428Z"
             }
           ]
         }

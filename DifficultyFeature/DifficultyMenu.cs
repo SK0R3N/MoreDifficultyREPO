@@ -1,15 +1,129 @@
-﻿using MenuLib;
+﻿using DifficultyFeature;
+using ExitGames.Client.Photon;
+using HarmonyLib;
+using MenuLib;
 using MenuLib.MonoBehaviors;
 using MenuLib.Structs;
+using Photon.Pun;
+using Photon.Realtime;
 using SingularityGroup.HotReload;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Text;
+using TMPro;
 using UnityEngine;
 using static b;
+using static UnityEngine.InputSystem.InputRemoting;
 
 namespace MyMOD
 {
+
+    public class DifficultyLabelUI : MonoBehaviour, IOnEventCallback, IInRoomCallbacks
+    {
+        public static DifficultyLabelUI Instance;
+        internal REPOLabel label;
+
+        // Code unique pour l'event RaiseEvent
+        public const byte DifficultyEventCode = 101;
+
+        private void Awake()
+        {
+            Instance = this;
+
+            //PhotonNetwork.AddCallbackTarget(this); 
+
+            var canvas = GameObject.Find("HUD Canvas");
+            if (!canvas)
+            {
+                Debug.LogError("[DifficultyLabelUI] HUD Canvas introuvable.");
+                return;
+            }
+
+            label = MenuAPI.CreateREPOLabel($"Difficulty: {DifficultyManager.CurrentDifficulty}", canvas.transform, Vector2.zero);
+            label.rectTransform.anchorMin = new Vector2(1f, 1f);
+            label.rectTransform.anchorMax = new Vector2(1f, 1f);
+            label.rectTransform.pivot = new Vector2(1f, 1f);
+            StartCoroutine(AdjustDifficultyLabelPosition());
+
+            PhotonNetwork.AddCallbackTarget(this);
+        }
+
+        private void OnDestroy()
+        {
+            PhotonNetwork.RemoveCallbackTarget(this); // Désinscription propre
+        }
+
+        public static void SendDifficultyToEveryone(string difficulty)
+        {
+            Debug.Log("[DifficultyLabelUI] Send Photon");
+            PhotonNetwork.RaiseEvent(
+                DifficultyEventCode,
+                difficulty,
+                new RaiseEventOptions { Receivers = ReceiverGroup.All },
+                SendOptions.SendReliable
+            );
+        }
+
+        public void OnEvent(EventData photonEvent)
+        {
+                if (photonEvent.Code == DifficultyEventCode)
+                {
+                    string difficulty = (string)photonEvent.CustomData;
+                    SetLabel(difficulty);
+                }
+        }
+
+        private void SetLabel(string difficulty)
+        {
+            Debug.Log("[DifficultyLabelUI] J'ai recu mon rpc");
+            if (label == null) return;
+            label.labelTMP.text = $"Difficulty: {difficulty}";
+            StartCoroutine(AdjustDifficultyLabelPosition());
+        }
+
+        public static IEnumerator AdjustDifficultyLabelPosition()
+        {
+            yield return null;
+            float width = Instance.label.labelTMP.preferredWidth;
+            float padding = 20f;
+            Instance.label.rectTransform.anchoredPosition = new Vector2(-width - padding, -40f);
+        }
+
+        public static void SetDifficulty(string difficulty)
+        {
+            if (Instance?.label == null) return;
+
+            Debug.Log($"[DifficultyLabelUI] Updating label: {difficulty}");
+            Instance.SetLabel(difficulty);
+            SendDifficultyToEveryone(difficulty);
+        }
+
+        public void OnPlayerEnteredRoom(Player newPlayer)
+        {
+            Debug.Log("[DifficultyLabelUI] J'envoieMonRPC");
+            if (PhotonNetwork.IsMasterClient)
+            {
+                Debug.Log("[DifficultyLabelUI] Un joueur a rejoint, envoi de la difficulté dans 1 seconde.");
+                StartCoroutine(SendDifficultyDelayed());
+            }
+        }
+
+        private IEnumerator SendDifficultyDelayed()
+        {
+            Debug.Log("[DifficultyLabelUI] Début seconde");
+            yield return new WaitForSeconds(5f);
+            Debug.Log("[DifficultyLabelUI] Fin seconde");
+            DifficultyLabelUI.SendDifficultyToEveryone(DifficultyManager.CurrentDifficulty.ToString());
+        }
+
+        // Non utilisés ici, mais nécessaires pour IInRoomCallbacks
+        public void OnPlayerLeftRoom(Player otherPlayer) { }
+        public void OnRoomPropertiesUpdate(ExitGames.Client.Photon.Hashtable propertiesThatChanged) { }
+        public void OnPlayerPropertiesUpdate(Player targetPlayer, ExitGames.Client.Photon.Hashtable changedProps) { }
+        public void OnMasterClientSwitched(Player newMasterClient) { }
+    }
+
     public class DifficultyMenu
     {
         public static string SelectedDifficulty = "Normal";
@@ -51,13 +165,17 @@ namespace MyMOD
                     {
                         SelectedDifficulty = difficulty;
                         DifficultyManager.CurrentDifficulty = (DifficultyManager.DifficultyLevel)Enum.Parse(typeof(DifficultyManager.DifficultyLevel), SelectedDifficulty);
+                        DifficultySaveManager.SaveDifficulty(SelectedDifficulty);
+                        DifficultyLabelUI.SetDifficulty(SelectedDifficulty);
+                       
+
                         Debug.Log($"[MyMod] Difficulty selected: {SelectedDifficulty}");
 
                         UpdateDifficultyRightPopup(difficulty);
                     },
                     parent: scroll,
                     stringOptions: options,
-                    defaultOption: SelectedDifficulty,
+                    defaultOption: DifficultyManager.CurrentDifficulty.ToString(),
                     localPosition: Vector2.zero,
                     prefix: "",
                     postfix: "",

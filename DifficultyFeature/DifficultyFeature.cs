@@ -1,4 +1,4 @@
-﻿using BepInEx;
+using BepInEx;
 using BepInEx.Logging;
 using ExitGames.Client.Photon;
 using HarmonyLib;
@@ -88,6 +88,7 @@ namespace DifficultyFeature
             Logger.LogInfo($"{Info.Metadata.GUID} v{Info.Metadata.Version} has loaded!");
         }
 
+
         internal void Patch()
         {
             Harmony ??= new Harmony(Info.Metadata.GUID);
@@ -110,6 +111,28 @@ namespace DifficultyFeature
                 {
                     DifficultyMenu.CreateDifficultyButton();
                     Debug.Log("[DifficultyUI] Difficulty button added to lobby.");
+                }
+            }
+
+            if (lobbyPage != null && PhotonNetwork.InRoom)
+            {
+                var existingLabel = GameObject.FindObjectOfType<DifficultyLabelUI>();
+
+                // Vérifie si l'objet existe encore mais n'est plus rattaché au HUD Canvas (ex: scene reload)
+                bool needsRecreate = existingLabel == null || existingLabel.label == null || existingLabel.label.transform.parent == null ;
+
+                if (needsRecreate)
+                {
+                    if (existingLabel != null)
+                    {
+                        GameObject.Destroy(existingLabel.gameObject); // Clean l'ancien label si besoin
+                    }
+
+                    var go = new GameObject("DifficultyLabelUI");
+                    var view = go.AddComponent<PhotonView>();
+                    go.AddComponent<DifficultyLabelUI>();
+                    GameObject.DontDestroyOnLoad(go);
+                    Debug.Log("[DifficultyLabelUI] Nouveau label instancié.");
                 }
             }
 

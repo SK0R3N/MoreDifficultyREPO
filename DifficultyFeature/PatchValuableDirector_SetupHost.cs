@@ -1,8 +1,9 @@
-﻿using BepInEx.Logging;
+using BepInEx.Logging;
 using HarmonyLib;
 using REPOLib;
 using System;
 using System.Collections.Generic;
+using System.Net;
 using System.Reflection;
 using System.Text;
 using UnityEngine;
@@ -80,7 +81,14 @@ namespace MyMOD
 
             foreach(var enemy in selectedEnemies)
             {
-                Log.LogInfo($"[Difficulty]  enemy list: {enemy.name}");
+                try
+                {
+                    Log.LogInfo($"[Difficulty]  enemy list: {enemy.name} && {enemy.rarityPreset.name}&& {enemy.levelsCompletedMin}");
+                }
+                catch (Exception e)
+                {
+                    Log.LogError($"[Difficulty]  enemy list: {enemy.name}");
+                }
             }
 
             Log.LogInfo($"[Difficulty] Final enemy list count: {selectedEnemies.Count}");
@@ -108,15 +116,32 @@ namespace MyMOD
             {
                 if (enemy == null) continue;
 
+                int random = UnityEngine.Random.Range(0, 100);
+
+                Log.LogInfo($"[DifficultyAddEnemies]  Random: {random}");
+                try
+                {
+                    Log.LogInfo($"[DifficultyAddEnemies]  enemy list: {enemy.name} && {enemy.rarityPreset.name}&& {enemy.levelsCompletedMin}");
+                }
+                catch (Exception e)
+                {
+                    Log.LogError($"[DifficultyAddEnemies]  enemy list: {enemy.name}");
+                }
+                try
+                {
+                    if (enemy.rarityPreset.name.ToLower().Contains("rare") && random >= 20) continue;
+                }
+                catch (Exception e){}
+
                 if (enemy.levelsCompletedCondition)
                 {
                     if (completed < enemy.levelsCompletedMin || completed > enemy.levelsCompletedMax)
                         continue;
                 }
-
-                // On autorise par défaut une seule occurrence
                 target.Add(enemy);
             }
+
+
         }
     }
 
@@ -130,6 +155,7 @@ namespace MyMOD
         {
             float multiplier = DifficultyManager3.GetShopPriceMultiplier(DifficultyManager.CurrentDifficulty);
             __instance.itemValueMultiplier = multiplier * 4;
+            Log.LogError($"{__instance.itemValueMultiplier}");
 
             Log.LogInfo($"[Difficulty] Shop price multiplier applied: x{multiplier}");
         }
