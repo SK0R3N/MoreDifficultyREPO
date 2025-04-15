@@ -14,8 +14,10 @@ using Steamworks.Ugc;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+
 using System.IO;
 using System.Linq;
+using System.Numerics;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Security.Claims;
@@ -47,11 +49,11 @@ namespace DifficultyFeature
             private static float scaleFactor = 0.2f; // Taille réduite
             private static float jumpMultiplier = 3f; // Sauts 3x plus hauts
             private static float voicePitch = 1.5f; // Voix plus aiguë
-            private static float cameraOffsetY = -0.8f; // Décalage caméra pour joueurs minuscules
+            private static float cameraOffsetY = -1.2f; // Décalage caméra pour joueurs minuscules
             private static float checkInterval = 0.1f;
 
 
-                private void Awake()
+            private void Awake()
             {
                 DontDestroyOnLoad(gameObject);
                 Debug.Log("[TinyPlayerEvent] Initialized.");
@@ -81,7 +83,7 @@ namespace DifficultyFeature
             public class TinyPlayerManager : MonoBehaviour
             {
                 private TinyPlayerEvent parentEvent;
-                private PhotonView photonView;
+                public static PhotonView photonView;
                 private static AudioClip tinySound;
                 public static AssetBundle AssetBundle { get; set; }
 
@@ -99,7 +101,6 @@ namespace DifficultyFeature
 
                     // Appliquer l'effet à tous les joueurs
                     ApplyTinyEffectToAll(PlayerAvatar.instance);
-                    StartCoroutine(ManageEvent(duration));
                 }
 
                 private void ApplyTinyEffectToAll(PlayerAvatar avatar)
@@ -126,7 +127,7 @@ namespace DifficultyFeature
                 public static IEnumerator ApplyTinyEffectRPC(PlayerAvatar avatar)
                 {
 
-                    string bundlePath = Path.Combine(Paths.PluginPath, "SK0R3N-DifficultyFeature", "assets", "Mario");
+                    string bundlePath = Path.Combine(Paths.PluginPath, "SK0R3N-DifficultyFeature", "assets", "tiny");
                     if (AssetBundle == null)
                     {
                         AssetBundle = AssetBundle.LoadFromFile(bundlePath);
@@ -135,95 +136,109 @@ namespace DifficultyFeature
                     if (tinySound == null)
                         tinySound = AssetBundle.LoadAsset<AudioClip>("tinymushroom");
 
-                    foreach (PlayerAvatar player in GameDirector.instance.PlayerList)
+                    if (avatar == null || avatar.isDisabled || avatar.deadSet)
                     {
-                        if (player == null || player.isDisabled || player.deadSet)
-                        {
-                            Debug.Log($"[TinyPlayerEvent] Skipping player {player?.playerName} (null, disabled, or dead).");
-                            continue;
-                        }
-
-                        // Réduire la taille
-
-                        // Jouer le son
-                        if (tinySound != null)
-                        {
-                            AudioSource localAudio = avatar.gameObject.AddComponent<AudioSource>();
-                            localAudio.clip = tinySound;
-                            localAudio.spatialBlend = 1f;
-                            localAudio.loop = false;
-                            localAudio.Play();
-                            Debug.Log($"[TinyPlayerEvent] Played 'tinymushroom' for {player.playerName}");
-                        }
-
-                        // Modifier la voix
-                        if (player.voiceChat != null)
-                        {
-                            player.voiceChat.OverridePitch(1.5f, 1f, 2f, duration);
-                            Debug.Log($"[TinyPlayerEvent] Set voice pitch to {voicePitch} for {player.playerName}");
-                        }
-
-                        // Augmenter les sauts (stocké dans une variable temporaire)
-                        player.gameObject.AddComponent<TinyJumpModifier>().Initialize(jumpMultiplier);
-
-                        int i = 0;
-                        while (i < 10)
-                        {
-                            i++;
-                            player.playerTransform.localScale = Vector3.one * scaleFactor;
-                            if (player.playerAvatarVisuals != null)
-                            {
-                                player.playerAvatarVisuals.transform.localScale = Vector3.one * scaleFactor;
-                            }
-
-                            // Ajuster la caméra
-                            if (player.isLocal)
-                            {
-                                player.localCameraTransform.localPosition += Vector3.up * cameraOffsetY;
-                                Debug.Log($"[TinyPlayerEvent] Adjusted camera for {player.playerName} to {player.localCameraTransform.localPosition}");
-                            }
-                        }
+                        Debug.Log($"[TinyPlayerEvent] Skipping player {avatar?.playerName} (null, disabled, or dead).");
                         yield return null;
                     }
+
+                    // Réduire la taille
+
+                    // Jouer le son
+                    if (tinySound != null)
+                    {
+                        AudioSource localAudio = avatar.gameObject.AddComponent<AudioSource>();
+                        localAudio.clip = tinySound;
+                        localAudio.spatialBlend = 1f;
+                        localAudio.loop = false;
+                        localAudio.Play();
+                        Debug.Log($"[TinyPlayerEvent] Played 'tinymushroom' for {avatar.playerName}");
+                    }
+
+                    // Modifier la voix
+                    if (avatar.voiceChat != null)
+                    {
+                        avatar.voiceChat.OverridePitch(1.5f, 1f, 2f, duration);
+                        Debug.Log($"[TinyPlayerEvent] Set voice pitch to {voicePitch} for {avatar.playerName}");
+                    }
+
+                    // Augmenter les sauts (stocké dans une variable temporaire)
+                    avatar.gameObject.AddComponent<TinyJumpModifier>().Initialize(jumpMultiplier);
+
+                    avatar.playerAvatarVisuals.transform.localScale = UnityEngine.Vector3.one * scaleFactor;
+                    // Ajuster la camér
+                    Debug.Log($"[TinyPlayerEvent] Adjusted camera for {avatar.playerName} to {avatar.mapToolController.VisualTransform.position}");
+
+                    if (avatar.isLocal)
+                    {
+                        avatar.playerTransform.localScale = UnityEngine.Vector3.one * scaleFactor;
+                        avatar.localCamera.transform.position += UnityEngine.Vector3.up * cameraOffsetY;
+                        avatar.localCamera.transform.localScale = UnityEngine.Vector3.one * scaleFactor;
+                        avatar.playerAvatarCollision.transform.localScale = UnityEngine.Vector3.one * scaleFactor;
+                        var visualsTransform = avatar.mapToolController.VisualTransform;
+                        PlayerAvatarUpdatePatch.IsTinyPlayerActive = true;
+                        foreach (Transform t in avatar.mapToolController.transform.parent.parent)
+                        {
+                            Debug.Log(t.name);
+
+                            try
+                            {
+                                Debug.Log($"[TinyPlayerEvent] Adjusted camera for {avatar.playerName} to {t.transform.position}");
+                                if (t.name.ToLower() == "map tool")
+                                    t.transform.position += UnityEngine.Vector3.up * cameraOffsetY;
+                                Debug.Log($"[TinyPlayerEvent] Adjusted camera for {avatar.playerName} to {t.transform.position}");
+                            }
+                            catch
+                            {
+                                Debug.Log(t.name);
+                            }
+
+                        }
+
+                    }
+                    yield return null;
                 }
 
-                private void RevertTinyEffectToAll()
+                public static string RevertTinyEffectRPC(PlayerAvatar player)
                 {
-                    if (SemiFunc.IsMultiplayer())
-                    {
-                        if (photonView != null && photonView.IsMine)
+                    Debug.Log("I am dead 5");
+                    if (player == null)
                         {
-                            photonView.RPC("RevertTinyEffectRPC", RpcTarget.All);
+                            return null;
                         }
-                    }
-                    else
-                    {
-                        RevertTinyEffectRPC();
-                    }
-                }
-
-                [PunRPC]
-                private void RevertTinyEffectRPC()
-                {
-                    foreach (PlayerAvatar player in GameDirector.instance.PlayerList)
-                    {
-                        if (player == null || player.isDisabled || player.deadSet)
-                        {
-                            continue;
-                        }
-
-                        // Restaurer la taille
-                        player.playerTransform.localScale = Vector3.one;
+                    Debug.Log("I am dead 6");
+                    // Restaurer la taille
+                    player.playerTransform.localScale = UnityEngine.Vector3.one;
                         if (player.playerAvatarVisuals != null)
                         {
-                            player.playerAvatarVisuals.transform.localScale = Vector3.one;
+                            player.playerAvatarVisuals.transform.localScale = UnityEngine.Vector3.one;
                         }
 
                         // Restaurer la caméra
                         if (player.isLocal)
                         {
-                            player.localCameraTransform.localPosition -= Vector3.up * cameraOffsetY;
-                            Debug.Log($"[TinyPlayerEvent] Restored camera for {player.playerName}");
+                        player.localCamera.transform.position -= UnityEngine.Vector3.up * cameraOffsetY;
+                        player.playerAvatarCollision.transform.localScale = UnityEngine.Vector3.one * scaleFactor;
+
+                        var visualsTransform = player.mapToolController.VisualTransform;
+                        player.localCamera.transform.position -= UnityEngine.Vector3.up * cameraOffsetY;
+                        foreach (Transform t in player.mapToolController.transform.parent.parent)
+                        {
+                            UnityEngine.Debug.Log(t.name);
+
+                            try
+                            {
+                                if (t.name.ToLower() == "map tool")
+                                    t.transform.position -= UnityEngine.Vector3.up * cameraOffsetY;
+
+                            }
+                            catch
+                            {
+                                UnityEngine.Debug.Log(t.name);
+                            }
+
+                        }
+                        Debug.Log($"[TinyPlayerEvent] Restored camera for {player.playerName}");
                         }
 
                         // Restaurer la voix
@@ -235,21 +250,11 @@ namespace DifficultyFeature
 
                         // Supprimer le modificateur de saut
                         TinyJumpModifier modifier = player.GetComponent<TinyJumpModifier>();
-                        if (modifier != null)
-                        {
-                            Destroy(modifier);
-                        }
+                    if (modifier != null)
+                    {
+                        Destroy(modifier);
                     }
-                }
-
-                private IEnumerator ManageEvent(float duration)
-                {
-                    yield return new WaitForSeconds(duration);
-
-                    RevertTinyEffectToAll();
-                    isActive = false;
-                    Debug.Log("[TinyPlayerEvent] Ended.");
-                    Destroy(gameObject);
+                    return null;
                 }
             }
 
@@ -278,7 +283,79 @@ namespace DifficultyFeature
                     return jumpMultiplier;
                 }
             }
-        }
+
+            [HarmonyPatch(typeof(PlayerAvatar), "Update")]
+            public class PlayerAvatarUpdatePatch
+            {
+                private static readonly float cameraCrouchFixOffset = -1.2f; // Offset pour rehausser la caméra
+                private static readonly float scaleFactor = 0.6f; // Doit correspondre à TinyPlayerEvent.scaleFactor
+
+                public static bool IsTinyPlayerActive = false;
+
+                [HarmonyPostfix]
+                public static void Postfix(PlayerAvatar __instance)
+                {
+                    if (!__instance.isLocal && !IsTinyPlayerActive)
+                    {
+                        Debug.Log("Nop marche pas");
+                        return; // Ne s'applique qu'au joueur local pendant l'événement tiny
+                    }
+
+                    if (__instance.isCrouching)
+                    {
+                        //Debug.Log("Je crouch");
+                        UnityEngine.Vector3 currentPos = __instance.transform.position;
+                        float minY = 0.2f; 
+                        //Debug.Log("[Ce qu'on veut]" + minY);
+                        //Debug.Log("[Ce qu'il est]" + __instance.localCamera.transform.position.y);
+                        if (__instance.localCamera.transform.position.y < currentPos.y)
+                        {
+                            //Debug.Log("cam trop basse");
+                            __instance.localCamera.transform.position = new UnityEngine.Vector3(currentPos.x, __instance.transform.position.y + 0.1f, currentPos.z);
+                            Debug.Log($"[TinyPlayerEventPatch] Caméra ajustée pour joueur accroupi tiny {__instance.playerName} : Y={minY}");
+                        }
+                    }
+                    else if (__instance.isDisabled)
+                    {
+                        IsTinyPlayerActive = false;
+
+                        Debug.Log("I am dead");
+                        if (SemiFunc.IsMultiplayer())
+                        {
+                            if (TinyPlayerManager.photonView != null && TinyPlayerManager.photonView.IsMine)
+                            {
+                                Debug.Log("I am dead 2");
+                                if (PhotonNetwork.InRoom)
+                                {
+                                    Debug.Log("I am dead 3");
+                                    PhotonView photonView = __instance.GetComponent<PhotonView>();
+                                    object[] eventData = new object[] { photonView.ViewID };
+                                    RaiseEventOptions raiseEventOptions = new RaiseEventOptions { Receivers = ReceiverGroup.All };
+                                    PhotonNetwork.RaiseEvent(4, eventData, raiseEventOptions, SendOptions.SendReliable);
+                                }
+                            }
+                            else
+                            {
+                                TinyPlayerManager.RevertTinyEffectRPC(__instance);
+                            }
+                        }
+                        else if (__instance.isGrounded)
+                    {
+                        //Debug.Log("[cam] y :" + __instance.localCamera.transform.position.y);
+                        //Debug.Log("[position] y :" + (__instance.transform.position.y + 0.4));
+                        if (__instance.localCamera.transform.position.y > (__instance.transform.position.y + 0.4) || __instance.transform.position.y < 0.2)
+                        {
+                            UnityEngine.Vector3 currentPos = __instance.transform.position;
+                            //Debug.Log("cam trop basse");
+                            __instance.localCamera.transform.position = new UnityEngine.Vector3(currentPos.x, __instance.transform.position.y + 0.2f, currentPos.z);
+                        }
+                    }
+                    
+
+                    }
+                }
+            }
+        } //Bug actuelle , clip le sol quand on se fait écraser
 
         public class ExplosiveDeathEvent : MonoBehaviour, ISlotEvent
         {
@@ -324,7 +401,7 @@ namespace DifficultyFeature
                 private ExplosiveDeathEvent parentEvent;
                 private PhotonView photonView;
                 private HashSet<EnemyParent> deadEnemies = new HashSet<EnemyParent>(); // Suivre les ennemis déjà morts
-                private HashSet<Vector3> explosionPositions = new HashSet<Vector3>(); // Éviter les doublons d'explosions
+                private HashSet<UnityEngine.Vector3> explosionPositions = new HashSet<UnityEngine.Vector3>(); // Éviter les doublons d'explosions
 
                 public void Initialize(ExplosiveDeathEvent parent, float duration)
                 {
@@ -390,12 +467,12 @@ namespace DifficultyFeature
                 private void TriggerExplosion(EnemyParent enemyParent)
                 {
                     string enemyName = enemyParent.Enemy.gameObject.name;
-                    Vector3 position = enemyParent.Enemy.CenterTransform != null
+                    UnityEngine.Vector3 position = enemyParent.Enemy.CenterTransform != null
                         ? enemyParent.Enemy.CenterTransform.position
                         : enemyParent.Enemy.transform.position;
 
                     // Arrondir la position pour éviter les micro-variations
-                    Vector3 roundedPosition = new Vector3(
+                    UnityEngine.Vector3 roundedPosition = new UnityEngine.Vector3(
                         Mathf.Round(position.x * 1000f) / 1000f,
                         Mathf.Round(position.y * 1000f) / 1000f,
                         Mathf.Round(position.z * 1000f) / 1000f);
@@ -426,7 +503,7 @@ namespace DifficultyFeature
                     }
                 }
 
-                private void CreateExplosion(Vector3 position, string sourceName)
+                private void CreateExplosion(UnityEngine.Vector3 position, string sourceName)
                 {
                     try
                     {
@@ -442,7 +519,7 @@ namespace DifficultyFeature
                             parentEvent.explosionPrefab = fallbackPrefab;
                         }
 
-                        GameObject explosionObj = Instantiate(parentEvent.explosionPrefab, position, Quaternion.identity);
+                        GameObject explosionObj = Instantiate(parentEvent.explosionPrefab, position, UnityEngine.Quaternion.identity);
                         Debug.Log($"[ExplosiveDeathEvent] Instantiated explosion for {sourceName} at {position}: {explosionObj.name}");
 
                         ParticleScriptExplosion explosionScript = explosionObj.GetComponent<ParticleScriptExplosion>();
@@ -489,9 +566,9 @@ namespace DifficultyFeature
                 }
 
                 [PunRPC]
-                private void ExplodeAtPosition(Vector3 position)
+                private void ExplodeAtPosition(UnityEngine.Vector3 position)
                 {
-                    Vector3 roundedPosition = new Vector3(
+                    UnityEngine.Vector3 roundedPosition = new UnityEngine.Vector3(
                         Mathf.Round(position.x * 1000f) / 1000f,
                         Mathf.Round(position.y * 1000f) / 1000f,
                         Mathf.Round(position.z * 1000f) / 1000f);
@@ -766,8 +843,8 @@ namespace DifficultyFeature
                     cam.backgroundColor = Color.black;
                     cam.cullingMask = LayerMask.GetMask("TopLayerOnly");
                     cam.targetTexture = waveformRenderTexture;
-                    waveformCameraGO.transform.position = new Vector3(0, 5f, 0);
-                    waveformCameraGO.transform.rotation = Quaternion.Euler(90f, 0, 0);
+                    waveformCameraGO.transform.position = new UnityEngine.Vector3(0, 5f, 0);
+                    waveformCameraGO.transform.rotation = UnityEngine.Quaternion.Euler(90f, 0, 0);
 
                     // Créer waveform
                     waveformVisualizerGO = new GameObject("WaveformVisualizer");
@@ -778,16 +855,16 @@ namespace DifficultyFeature
                     lr.endColor = Color.red;
                     lr.widthMultiplier = 0.05f;
                     lr.useWorldSpace = false;
-                    waveformVisualizerGO.transform.position = new Vector3(-512 * 0.005f, 0, -256 * 0.005f);
-                    waveformVisualizerGO.transform.rotation = Quaternion.identity;
+                    waveformVisualizerGO.transform.position = new UnityEngine.Vector3(-512 * 0.005f, 0, -256 * 0.005f);
+                    waveformVisualizerGO.transform.rotation = UnityEngine.Quaternion.identity;
 
                     var vis = waveformVisualizerGO.AddComponent<WaveformVisualizer>();
                     vis.voiceChat = player.voiceChat;
 
                     // Charger asset bundle et matériel
                     string bundlePath = Path.Combine(Paths.PluginPath, "SK0R3N-DifficultyFeature", "assets", "walky");
-                    if(walkyBundle == null)
-                    walkyBundle = AssetBundle.LoadFromFile(bundlePath);
+                    if (walkyBundle == null)
+                        walkyBundle = AssetBundle.LoadFromFile(bundlePath);
 
                     if (walkyBundle == null)
                     {
@@ -795,8 +872,8 @@ namespace DifficultyFeature
                         return;
                     }
 
-                    if(waveformMat == null)
-                    waveformMat = walkyBundle.LoadAsset<Material>("WaveformDisplayMat");
+                    if (waveformMat == null)
+                        waveformMat = walkyBundle.LoadAsset<Material>("WaveformDisplayMat");
 
                     if (waveformMat == null)
                     {
@@ -861,7 +938,7 @@ namespace DifficultyFeature
                     {
                         float x = i * 0.01f;
                         float z = Mathf.Sin(i * 0.2f + Time.time * 4f) * loudness * amplitude;
-                        lineRenderer.SetPosition(i, new Vector3(x, 0, z));
+                        lineRenderer.SetPosition(i, new UnityEngine.Vector3(x, 0, z));
                     }
                 }
             }
@@ -873,6 +950,10 @@ namespace DifficultyFeature
             public string IconName => "icon_timeslow";
             public string Asset => "TestAsset";
 
+            private ExtractionPoint currentExtractionPoint = null;
+            private bool oneTimeOnly = false;
+            private bool hasModifiedHaulGoal = false;
+
             public void Execute()
             {
                 var player = PlayerController.instance;
@@ -880,7 +961,7 @@ namespace DifficultyFeature
 
                 int count = 15;
                 float radius = 10f;
-                Vector3 center = player.transform.position;
+                UnityEngine.Vector3 center = player.transform.position;
                 List<EnemyParent> spawnedEnemies = new();
 
                 for (int i = 0; i < count; i++)
@@ -905,22 +986,24 @@ namespace DifficultyFeature
                             break;
                     }
 
-                    if (!enemyName.ToLower().Contains("gnome"))
+                    if (!enemyName.ToLower().Contains("gnome") && !enemyName.ToLower().Contains("bang"))
                     {
                         if (!EnemyDirector.instance.TryGetEnemyThatContainsName(enemyName, out EnemySetup enemySetup))
                         {
                             Debug.LogWarning($"[EnemyRainEvent] Enemy not found: {enemyName}");
                             continue;
                         }
+                        if (!enemySetup.name.ToLower().Contains("group"))
+                        {
+                            float angle = i * Mathf.PI * 2f / count;
+                            UnityEngine.Vector3 offset = new UnityEngine.Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * radius;
+                            UnityEngine.Vector3 spawnPos = center + offset + UnityEngine.Vector3.up;
+                            Debug.Log(enemySetup.name);
+                            EnemyParent enemy = Enemies.SpawnEnemy(enemySetup, spawnPos, UnityEngine.Quaternion.identity, spawnDespawned: false).First();
+                            spawnedEnemies.Add(enemy);
 
-                        float angle = i * Mathf.PI * 2f / count;
-                        Vector3 offset = new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * radius;
-                        Vector3 spawnPos = center + offset + Vector3.up;
-
-                        List<EnemyParent> enemy = Enemies.SpawnEnemy(enemySetup, spawnPos, Quaternion.identity, spawnDespawned: false);
-                        spawnedEnemies.Add(enemy.First());
-
-                        Debug.Log($"[EnemyRainEvent] Spawned {enemy.First().name} at {spawnPos}");
+                            Debug.Log($"[EnemyRainEvent] Spawned {enemy.name} at {spawnPos}");
+                        }
                     }
                     else
                     {
@@ -930,29 +1013,93 @@ namespace DifficultyFeature
 
                 // Lance la suppression après 30 secondes
                 Debug.Log(spawnedEnemies.ToList());
-                foreach (var enemy in spawnedEnemies)
-                {
-                    Debug.Log($"[EnemyRainEvent] Destroyed {enemy.name}");
-                }
                 PlayerController.instance.StartCoroutine(DestroyEnemiesAfterDelay(spawnedEnemies, 30f));
             }
 
             private IEnumerator DestroyEnemiesAfterDelay(List<EnemyParent> enemies, float delay)
             {
                 yield return new WaitForSeconds(delay);
-                
 
                 foreach (var enemy in enemies)
                 {
+                    Debug.Log(enemy.name);
                     if (enemy != null)
                     {
-                       PhotonNetwork.Destroy(enemy.GameObject());
-                       Debug.Log($"[EnemyRainEvent] Destroyed {enemy.name}");
+                        enemy.Despawn();
+                        Debug.Log($"[EnemyRainEvent] Destroyed {enemy.name}");
 
                     }
                 }
+
+                Debug.Log(PlayerAvatar.instance.isDisabled);
+                if (!PlayerAvatar.instance.isDisabled)
+                {
+                    Debug.Log("test");
+                    oneTimeOnly = true;
+                    PlayerController.instance.StartCoroutine(CheckExtractionPoints());
+                }
             }
-        } //Non Finis
+
+            private IEnumerator CheckExtractionPoints()
+            {
+                while (oneTimeOnly)
+                {
+                    if (RoundDirector.instance == null || RoundDirector.instance.extractionPointList == null)
+                    {
+                        Debug.LogWarning("[ExtractionPointHaulModifier] RoundDirector or extractionPointList is null. Waiting...");
+                        yield return new WaitForSeconds(0.5f);
+                        continue;
+                    }
+                    foreach (GameObject extractionPointObj in RoundDirector.instance.extractionPointList)
+                    {
+                        if (extractionPointObj == null) continue;
+
+                        ExtractionPoint point = extractionPointObj.GetComponent<ExtractionPoint>();
+                        if (point == null) continue;
+
+                        if (point.currentState == ExtractionPoint.State.Active && !hasModifiedHaulGoal)
+                        {
+                            currentExtractionPoint = point;
+                            ModifyHaulGoal(point);
+                            hasModifiedHaulGoal = true;
+                            yield break;
+                        }
+                    }
+                    yield return new WaitForSeconds(0.5f);
+                }
+            }
+
+            private void ModifyHaulGoal(ExtractionPoint point)
+            {
+                if (point == null || point.haulGoal <= 0)
+                {
+                    Debug.LogWarning("[ExtractionPointHaulModifier] Invalid haulGoal or ExtractionPoint.");
+                    return;
+                }
+
+                float modifier = UnityEngine.Random.Range(0.01f, 0.99f);
+                int newHaulGoal = Mathf.RoundToInt(point.haulGoal * modifier);
+
+                float percentage = (modifier - 1f) * 100f;
+                string sign = percentage >= 0 ? "+" : "";
+                Debug.Log($"[ExtractionPointHaulModifier] Modifying haulGoal from {point.haulGoal} to {newHaulGoal} ({sign}{percentage:F0}%)");
+
+                oneTimeOnly = false;
+                if (SemiFunc.IsMultiplayer())
+                {
+                    if (SemiFunc.IsMasterClient())
+                    {
+                        point.photonView.RPC("HaulGoalSetRPC", RpcTarget.All, newHaulGoal);
+                    }
+                }
+                else
+                {
+                    point.haulGoal = newHaulGoal;
+                    RoundDirector.instance.extractionHaulGoal = newHaulGoal;
+                    point.haulGoalFetched = true;
+                }
+            }
+        } //Finis ?
 
         public class TimeSlowEvent : ISlotEvent
         {
@@ -1069,7 +1216,7 @@ namespace DifficultyFeature
 
                 // Liste des modules existants
                 var modules = GameObject.FindObjectsOfType<Module>();
-                if (modules.Length  == 0)
+                if (modules.Length == 0)
                 {
                     Debug.LogError("[RandomTP] Aucun module trouvé !");
                     return;
@@ -1079,7 +1226,7 @@ namespace DifficultyFeature
                 var randomModule = modules[UnityEngine.Random.Range(0, modules.Length)];
 
                 // On essaie de trouver un point de positionnement safe dans la salle
-                var targetPosition = randomModule.transform.position + Vector3.up * 1.5f;
+                var targetPosition = randomModule.transform.position + UnityEngine.Vector3.up * 1.5f;
 
                 // Appliquer le TP
                 player.transform.position = targetPosition;
@@ -1102,7 +1249,7 @@ namespace DifficultyFeature
                 GameObject gunInstance2 = new GameObject();
                 try
                 {
-                    gunInstance2 = PhotonNetwork.Instantiate("items/Golden_Gun", player.transform.position + player.transform.forward, Quaternion.identity);
+                    gunInstance2 = PhotonNetwork.Instantiate("items/Golden_Gun", player.transform.position + player.transform.forward, UnityEngine.Quaternion.identity);
                 }
                 catch (Exception e)
                 {
@@ -1215,19 +1362,19 @@ namespace DifficultyFeature
 
                 int count = 15;
                 float radius = 10f;
-                Vector3 center = player.transform.position;
+                UnityEngine.Vector3 center = player.transform.position;
 
                 for (int i = 0; i < count; i++)
                 {
                     float angle = i * Mathf.PI * 2f / count;
-                    Vector3 offset = new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * radius;
-                    Vector3 spawnPos = center + offset;
+                    UnityEngine.Vector3 offset = new UnityEngine.Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * radius;
+                    UnityEngine.Vector3 spawnPos = center + offset;
 
 
                     spawnPos.y += 2f;
 
                     Debug.Log($"[EnemyRainEvent] Spawning enemy #{i + 1} at {spawnPos}");
-                    Enemies.SpawnEnemy(enemySetup, spawnPos, Quaternion.identity, spawnDespawned: false);
+                    Enemies.SpawnEnemy(enemySetup, spawnPos, UnityEngine.Quaternion.identity, spawnDespawned: false);
                 }
             }
         } //Finis Marche Bien
@@ -1324,7 +1471,7 @@ namespace DifficultyFeature
                 {
                     Debug.Log("Envoie Photon");
                     PhotonView photonView = avatar.GetComponent<PhotonView>();
-                    object[] eventData = new object[] { photonView.ViewID }; 
+                    object[] eventData = new object[] { photonView.ViewID };
                     RaiseEventOptions raiseEventOptions = new RaiseEventOptions { Receivers = ReceiverGroup.All };
                     PhotonNetwork.RaiseEvent(2, eventData, raiseEventOptions, SendOptions.SendReliable);
                 }
@@ -1462,7 +1609,7 @@ namespace DifficultyFeature
                             eyeL = t;
                     }
 
-                    if (eyeR == null || eyeL == null )
+                    if (eyeR == null || eyeL == null)
                     {
                         Debug.LogWarning("[AlarmEffectController] One or both eyes not found.");
                         yield break;
@@ -1523,7 +1670,7 @@ namespace DifficultyFeature
                         if (enemy.HasHealth && enemy.Health != null && !enemy.Health.dead)
                         {
                             Debug.Log($"[MarioStarPower] Ennemi {enemy.name} valide. Application des 999 dégâts.");
-                            enemy.Health.Hurt(999, Vector3.zero);
+                            enemy.Health.Hurt(999, UnityEngine.Vector3.zero);
                         }
                         else
                         {
@@ -1548,7 +1695,7 @@ namespace DifficultyFeature
 
             public void Execute()
             {
-                MapLockController.LockForSeconds(60f); 
+                MapLockController.LockForSeconds(60f);
             }
 
             private static class MapLockController
@@ -1638,23 +1785,23 @@ namespace DifficultyFeature
                 switch (i)
                 {
                     case 0:
-                    {
-                      request = DifficultyFeature.request1;
-                      break;
-                    }
+                        {
+                            request = DifficultyFeature.request1;
+                            break;
+                        }
                     case 1:
-                    {
-                      request = DifficultyFeature.request2;
-                      break;
-                    }
+                        {
+                            request = DifficultyFeature.request2;
+                            break;
+                        }
                     case 2:
-                    {
-                      request = DifficultyFeature.request1;
-                      break;
-                    }
+                        {
+                            request = DifficultyFeature.request1;
+                            break;
+                        }
                     default:
-                    Debug.LogError($"[VideoMapEvent] {i}");
-                    break;
+                        Debug.LogError($"[VideoMapEvent] {i}");
+                        break;
                 }
 
 
@@ -1667,7 +1814,7 @@ namespace DifficultyFeature
                         return;
                     }
 
-                    InitVideoPlayer(videoClip, display, map); 
+                    InitVideoPlayer(videoClip, display, map);
                 };
 
             }
@@ -1677,7 +1824,7 @@ namespace DifficultyFeature
                 RenderTexture renderTexture = new RenderTexture(256, 256, 0);
                 Debug.LogError("[VideoMapEvent] Where lag 1");
                 renderTexture.wrapMode = TextureWrapMode.Clamp;
-                renderTexture.filterMode = FilterMode.Point; 
+                renderTexture.filterMode = FilterMode.Point;
                 renderTexture.anisoLevel = 0;
                 renderTexture.useMipMap = false;
                 map.mapToolController.Active = true;
@@ -1692,7 +1839,7 @@ namespace DifficultyFeature
                 player.targetTexture = renderTexture;
                 player.audioOutputMode = VideoAudioOutputMode.AudioSource;
                 player.SetDirectAudioVolume(0, 0f);
-              
+
 
                 player.prepareCompleted += (_) =>
                 {
@@ -1707,7 +1854,7 @@ namespace DifficultyFeature
 
                 Debug.Log("[VideoMapEvent] Video successfully applied to minimap screen.");
             }
-            private float volume = 0f; 
+            private float volume = 0f;
 
             private IEnumerator UpdateAudioWithMapToggle(VideoPlayer audioSource, PlayerAvatar map)
             {
@@ -1716,7 +1863,7 @@ namespace DifficultyFeature
                     bool isMapOpen = map.mapToolController.Active;
                     Debug.LogError($"[VideoMapEvent] {isMapOpen}");
                     volume = isMapOpen ? 1f : volume - 0.1f;
-                    audioSource.SetDirectAudioVolume(0, volume); 
+                    audioSource.SetDirectAudioVolume(0, volume);
                     yield return new WaitForSeconds(0.1f); // vérifie toutes les 100 ms
                 }
             }
@@ -1879,7 +2026,7 @@ namespace DifficultyFeature
 
                     if (head)
                     {
-                        head.localRotation = Quaternion.Euler(
+                        head.localRotation = UnityEngine.Quaternion.Euler(
                             Mathf.Sin(Time.time * 20f) * 2f,
                             Mathf.Sin(Time.time * 15f) * 2f,
                             0f
@@ -1900,7 +2047,7 @@ namespace DifficultyFeature
 
                     eyeMatL?.SetFloat("_ColorOverlayAmount", 0f);
                     eyeMatR?.SetFloat("_ColorOverlayAmount", 0f);
-                    if (head) head.localRotation = Quaternion.identity;
+                    if (head) head.localRotation = UnityEngine.Quaternion.identity;
 
                     audioSource?.Stop();
                     Debug.Log("[AlarmEffectController] Alarm effect stopped. Cleaning up.");

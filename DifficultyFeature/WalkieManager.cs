@@ -148,20 +148,6 @@ public class WalkieVoiceDuplicator : MonoBehaviour
         Debug.Log($"[WalkieVoiceDuplicator] VoiceConnection found. ClientState: {voiceConnection.ClientState}, Connected: {voiceConnection.Client.IsConnected}");
         voiceConnection.RemoteVoiceAdded += OnRemoteVoiceAdded;
         Debug.Log("[WalkieVoiceDuplicator] Listening for remote voices (hooked RemoteVoiceAdded).");
-        StartCoroutine(TestAudio());
-    }
-
-    private IEnumerator TestAudio()
-    {
-        yield return new WaitForSeconds(5f);
-        var testStream = new BufferedVoiceStream(gameObject);
-        float[] testFrame = new float[4800];
-        for (int i = 0; i < testFrame.Length; i++)
-        {
-            testFrame[i] = Mathf.Sin(i * 0.1f) * 0.5f;
-        }
-        Debug.Log("[WalkieVoiceDuplicator] Playing test audio");
-        testStream.PlayFrame(testFrame);
     }
 
     void Update()

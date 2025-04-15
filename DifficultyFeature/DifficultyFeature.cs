@@ -58,14 +58,14 @@ namespace DifficultyFeature
             //SlotEventManager.RegisterEvent(new RevealMapEvent());
             //SlotEventManager.RegisterEvent(new RandomTeleportEvent());
             //SlotEventManager.RegisterEvent(new TimeSlowEvent());
-            //SlotEventManager.RegisterEvent(new SurviveHorror());
+            SlotEventManager.RegisterEvent(new SurviveHorror());
             //SlotEventManager.RegisterEvent(new BetterWalkieTakkie());
             //SlotEventManager.RegisterEvent(new AlarmEvent());
             //SlotEventManager.RegisterEvent(new MarioStarEvent());
             //SlotEventManager.RegisterEvent(new ExtractionPointHaulModifier());
             //SlotEventManager.RegisterEvent(new RevivePlayerEvent());
             //SlotEventManager.RegisterEvent(new ExplosiveDeathEvent());
-            SlotEventManager.RegisterEvent(new TinyPlayerEvent());
+            //SlotEventManager.RegisterEvent(new TinyPlayerEvent());
             string bundlePath = Path.Combine(Paths.PluginPath, "SK0R3N-DifficultyFeature", "assets", "video");
             AssetBundle bundle = AssetBundle.LoadFromFile(bundlePath);
             request1 = bundle.LoadAssetAsync<VideoClip>("Clash");
@@ -79,6 +79,9 @@ namespace DifficultyFeature
             Item item = bundle2.LoadAsset<Item>("Golden_Gun.asset");
 
             REPOLib.Modules.Items.RegisterItem(item);
+
+            var harmony = new Harmony("SK0R3N.DifficultyFeature");
+            harmony.PatchAll();
 
             Patch();
 
@@ -291,6 +294,35 @@ namespace DifficultyFeature
                     // Démarrer la coroutine sur le GameObject du joueur
                     Debug.Log("[AlarmEventHandler] Starting RPC_PlayMarioStarSound coroutine.");
                     avatarTiny.StartCoroutine(TinyPlayerEvent.TinyPlayerManager.ApplyTinyEffectRPC(avatarTiny));
+                    break;
+                case 4:
+                    object[] data5 = (object[])photonEvent.CustomData;
+
+                    if (data5 == null || data5.Length < 1)
+                    {
+                        Debug.LogError("[AlarmEventHandler] Invalid event data received.");
+                        return;
+                    }
+
+                    int viewIdTinyRevert = (int)data5[0];
+                    PhotonView photonViewTinyRevert = PhotonView.Find(viewIdTinyRevert);
+                    if (photonViewTinyRevert == null)
+                    {
+                        Debug.LogError($"[AlarmEventHandler] ViewID {viewIdTinyRevert} not found.");
+                        return;
+                    }
+
+                    GameObject targetTinyRevert = photonViewTinyRevert.gameObject;
+                    PlayerAvatar avatarTinyRevert = targetTinyRevert.GetComponent<PlayerAvatar>();
+
+                    if (avatarTinyRevert == null)
+                    {
+                        Debug.LogError("[AlarmEventHandler] No PlayerAvatar on target object.");
+                        return;
+                    }
+
+                    Debug.Log("[AlarmEventHandler] Starting RPC_PlayMarioStarSound coroutine.");
+                    avatarTinyRevert.StartCoroutine(TinyPlayerEvent.TinyPlayerManager.RevertTinyEffectRPC(avatarTinyRevert));
                     break;
 
 
