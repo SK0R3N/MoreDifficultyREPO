@@ -140,7 +140,7 @@ namespace MyMOD
                 return;
             }
 
-            Vector2 buttonPosition = new Vector2(0f, 0f);
+            Vector2 buttonPosition = new Vector2(540f, 320f);
 
             var button = MenuAPI.CreateREPOButton("Choose Difficulty", OpenDifficultyPopup, menuPageLobby.transform, buttonPosition);
             button.name = "DifficultyButton";

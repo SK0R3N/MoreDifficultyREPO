@@ -15,7 +15,7 @@ This mod enhances REPO by adding:
 
 **Installation:**
 
--Place the mods file into:
+- Place the mods file into:
  BepInEx/plugins/
 
 **Launch the game**, then host a lobby to access the new difficulty UI.
@@ -32,7 +32,6 @@ This mod enhances REPO by adding:
 | **Custom**             | Custom             | Custom       |  --------   | Full interface to configure every setting manually |
 
 **Know Issue :**
-- Crash when loading a save.
 - Difficulty mode not in SinglePlayer.
 
 **What's next ?**
