@@ -31,7 +31,7 @@ namespace DifficultyFeature
         private class SaveData
         {
             public string Difficulty { get; set; } = "Normal";
-            public string WalkieWinnerSteamID { get; set; } = null; // ID du gagnant
+            public HashSet<string> WalkieWinnerSteamIDs { get; set; } = new HashSet<string>(); // Ensemble de gagnants
         }
 
         static DifficultySaveManager()
@@ -57,16 +57,16 @@ namespace DifficultyFeature
             SaveToFile();
         }
 
-        public static void SaveWalkieWinner(string steamID)
+        public static void AddWalkieWinner(string steamID)
         {
             string saveFileName = StatsManager.instance.saveFileCurrent;
             if (!saveData.ContainsKey(saveFileName))
             {
                 saveData[saveFileName] = new SaveData();
             }
-            saveData[saveFileName].WalkieWinnerSteamID = steamID;
+            saveData[saveFileName].WalkieWinnerSteamIDs.Add(steamID);
             SaveToFile();
-            Debug.Log($"[DifficultySaveManager] Saved WalkieWinner for {saveFileName}: {steamID}");
+            Debug.Log($"[DifficultySaveManager] Added WalkieWinner for {saveFileName}: {steamID}");
         }
 
         public static string LoadDifficulty(string saveFileName)
@@ -78,13 +78,13 @@ namespace DifficultyFeature
             return "Normal"; // Valeur par défaut
         }
 
-        public static string LoadWalkieWinner(string saveFileName)
+        public static HashSet<string> LoadWalkieWinners(string saveFileName)
         {
             if (saveData.TryGetValue(saveFileName, out SaveData data))
             {
-                return data.WalkieWinnerSteamID;
+                return data.WalkieWinnerSteamIDs;
             }
-            return null; // Aucun gagnant
+            return new HashSet<string>(); // Aucun gagnant
         }
 
         private static void SaveToFile()
@@ -125,11 +125,10 @@ namespace DifficultyFeature
                 Debug.Log($"[Difficulty] Difficulty for save: {loadedDifficulty}");
                 DifficultyManager.CurrentDifficulty = (DifficultyManager.DifficultyLevel)Enum.Parse(typeof(DifficultyManager.DifficultyLevel), loadedDifficulty);
 
-                // Charger le gagnant du walkie
-                string walkieWinner = DifficultySaveManager.LoadWalkieWinner(currentSave);
-                Debug.Log($"[Difficulty] Walkie winner for save: {walkieWinner ?? "None"}");
+                // Charger les gagnants du walkie
+                HashSet<string> walkieWinners = DifficultySaveManager.LoadWalkieWinners(currentSave);
+                Debug.Log($"[Difficulty] Walkie winners for save: {(walkieWinners.Count > 0 ? string.Join(", ", walkieWinners) : "None")}");
             }
         }
-
     }
 }

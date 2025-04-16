@@ -526,8 +526,6 @@ public class WalkieSender : MonoBehaviour
         }
     }
 
-
-
         void Update()
     {
         if (!photonView.IsMine) return;

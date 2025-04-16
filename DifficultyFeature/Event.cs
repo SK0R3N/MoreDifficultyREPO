@@ -799,18 +799,18 @@ namespace DifficultyFeature
             internal static AssetBundle walkyBundle;
             internal static Material waveformMat;
             internal static bool Toggle;
-            private static string currentWinnerSteamID = null; // Stocke temporairement le gagnant
-            private const byte EVENT_WALKIE_WINNER = 105; // Nouveau code pour l'événement Photon
+            private static HashSet<string> currentWinnerSteamIDs = new HashSet<string>(); // Ensemble de gagnants
+            private const byte EVENT_WALKIE_WINNER = 5; // Code pour l'événement Photon
 
             public void Execute()
             {
                 instance = this;
-                // Initialiser ou charger le gagnant au démarrage
+                // Initialiser ou charger les gagnants au démarrage
                 if (PhotonNetwork.IsMasterClient)
                 {
                     string saveFileName = DifficultySaveContext.CurrentSaveFileName;
-                    currentWinnerSteamID = DifficultySaveManager.LoadWalkieWinner(saveFileName);
-                    SyncWinnerToClients(currentWinnerSteamID);
+                    currentWinnerSteamIDs = DifficultySaveManager.LoadWalkieWinners(saveFileName);
+                    SyncWinnersToClients(currentWinnerSteamIDs);
                 }
             }
 
@@ -832,9 +832,9 @@ namespace DifficultyFeature
                 Toggle = enabled;
                 if (enabled)
                 {
-                    // Déterminer le gagnant (par exemple, le joueur qui active)
-                    string playerSteamID = SemiFunc.PlayerGetSteamID(player); // Hypothétique, à adapter
-                    SetWinner(playerSteamID);
+                    // Ajouter le joueur comme gagnant
+                    string playerSteamID = SemiFunc.PlayerGetSteamID(player);
+                    AddWinner(playerSteamID);
 
                     WalkieReceiver.walkieEnabled = true;
                     if (originalDisplayMaterial == null)
@@ -910,15 +910,15 @@ namespace DifficultyFeature
                 }
             }
 
-            private void SetWinner(string steamID)
+            private void AddWinner(string steamID)
             {
                 if (PhotonNetwork.IsMasterClient)
                 {
-                    currentWinnerSteamID = steamID;
+                    currentWinnerSteamIDs.Add(steamID);
                     string saveFileName = DifficultySaveContext.CurrentSaveFileName;
-                    DifficultySaveManager.SaveWalkieWinner(steamID);
-                    SyncWinnerToClients(steamID);
-                    Debug.Log($"[BetterWalkieTakkie] Host set winner: {steamID}");
+                    DifficultySaveManager.AddWalkieWinner(steamID);
+                    SyncWinnersToClients(currentWinnerSteamIDs);
+                    Debug.Log($"[BetterWalkieTakkie] Host added winner: {steamID}");
                 }
                 else
                 {
@@ -933,15 +933,15 @@ namespace DifficultyFeature
                 }
             }
 
-            // Synchroniser le gagnant à tous les clients
-            private void SyncWinnerToClients(string steamID)
+            // Synchroniser les gagnants à tous les clients
+            private void SyncWinnersToClients(HashSet<string> steamIDs)
             {
                 if (!PhotonNetwork.IsMasterClient) return;
 
-                object[] content = new object[] { steamID };
+                object[] content = new object[] { steamIDs.ToArray() };
                 var options = new RaiseEventOptions { Receivers = ReceiverGroup.All };
                 PhotonNetwork.RaiseEvent(EVENT_WALKIE_WINNER, content, options, SendOptions.SendReliable);
-                Debug.Log($"[BetterWalkieTakkie] Synced winner to all clients: {steamID}");
+                Debug.Log($"[BetterWalkieTakkie] Synced winners to all clients: {string.Join(", ", steamIDs)}");
             }
 
             // Recevoir les événements réseau
@@ -955,14 +955,13 @@ namespace DifficultyFeature
                     // L'host reçoit une demande de client
                     int viewID = (int)data[0];
                     string steamID = (string)data[1];
-                    instance.SetWinner(steamID); // Met à jour et synchronise
+                    instance.AddWinner(steamID); // Ajoute et synchronise
                 }
-                else if (data.Length == 1)
+                else if (data.Length == 1 && data[0] is string[] steamIDs)
                 {
-                    // Tous les clients reçoivent la synchro du gagnant
-                    string steamID = (string)data[0];
-                    currentWinnerSteamID = steamID;
-                    Debug.Log($"[BetterWalkieTakkie] Received winner: {steamID}");
+                    // Tous les clients reçoivent la synchro des gagnants
+                    currentWinnerSteamIDs = new HashSet<string>(steamIDs);
+                    Debug.Log($"[BetterWalkieTakkie] Received winners: {string.Join(", ", currentWinnerSteamIDs)}");
                 }
             }
 
@@ -995,6 +994,7 @@ namespace DifficultyFeature
                     }
                 }
             }
+
         } //Finis ?
 
         public class SurviveHorror : ISlotEvent

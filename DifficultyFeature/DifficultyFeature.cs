@@ -4,8 +4,10 @@ using ExitGames.Client.Photon;
 using HarmonyLib;
 using MyMOD;
 using Photon.Pun;
+using Photon.Realtime;
 using REPOLib.Modules;
 using REPOLib.Objects;
+using Steamworks;
 using Steamworks.Ugc;
 using System;
 using System.Collections;
@@ -31,6 +33,7 @@ namespace DifficultyFeature
         private static CustomPrefabPool _customPool;
         private HashSet<string> seenObjects = new();
         private bool subscribed = false;
+        private const byte EVENT_CHECK_WALKIE_WINNER = 6;
 
 
         public static int DifficultyLevel { get; set; } = 1;
@@ -57,9 +60,9 @@ namespace DifficultyFeature
             //SlotEventManager.RegisterEvent(new GoldenGunEvent());
             //SlotEventManager.RegisterEvent(new RevealMapEvent());
             //SlotEventManager.RegisterEvent(new RandomTeleportEvent());
-            SlotEventManager.RegisterEvent(new TimeSlowEvent());
+            //SlotEventManager.RegisterEvent(new TimeSlowEvent());
             //SlotEventManager.RegisterEvent(new SurviveHorror());
-            //SlotEventManager.RegisterEvent(new BetterWalkieTakkie());
+            SlotEventManager.RegisterEvent(new BetterWalkieTakkie());
             //SlotEventManager.RegisterEvent(new AlarmEvent());
             //SlotEventManager.RegisterEvent(new MarioStarEvent());
             //SlotEventManager.RegisterEvent(new ExtractionPointHaulModifier());
@@ -162,6 +165,11 @@ namespace DifficultyFeature
                     //DisableAllMapGeometry();
                     BetterWalkieTakkie.instance.ToggleWalkie(true);
                 }
+                else
+                {
+                    // BetterWalkieTakkie est null, demander à l'host de vérifier
+                    RequestWalkieWinnerCheck();
+                }
 
             }
             if (playerAvatar.mapToolController.Active && Input.GetKeyDown(KeyCode.LeftArrow))
@@ -179,14 +187,6 @@ namespace DifficultyFeature
             }
         }
 
-        private void OnDestroy()
-        {
-            if (subscribed && PhotonNetwork.NetworkingClient != null)
-            {
-                PhotonNetwork.NetworkingClient.EventReceived -= OnEvent;
-                Debug.Log("[WalkiePlugin] Event listener unregistered from OnDestroy()");
-            }
-        }
 
         //Plugin Methode
         public void OnEvent(EventData photonEvent)
@@ -226,6 +226,30 @@ namespace DifficultyFeature
                     break;
                 case 105: // Gagnant du walkie
                     BetterWalkieTakkie.HandleWinnerEvent(photonEvent);
+                    break;
+                case EVENT_CHECK_WALKIE_WINNER: // Vérification du gagnant
+                    if (photonEvent.CustomData is object[] data6 && data6.Length == 2)
+                    {
+                        int viewID = (int)data6[0];
+                        string steamID = (string)data6[1];
+
+                        if (PhotonNetwork.IsMasterClient)
+                        {
+                            string saveFileName = DifficultySaveContext.CurrentSaveFileName;
+                            HashSet<string> winners = DifficultySaveManager.LoadWalkieWinners(saveFileName);
+
+                            if (winners.Contains(steamID))
+                            {
+                                object[] content = new object[] { steamID };
+                                var options = new RaiseEventOptions { Receivers = ReceiverGroup.All };
+                                PhotonNetwork.RaiseEvent(7, content, options, SendOptions.SendReliable);
+                            }
+                            else
+                            {
+                                Debug.Log($"[DifficultyFeature] SteamID={steamID} n'est pas dans la liste des gagnants.");
+                            }
+                        }
+                    }
                     break;
 
                 case 1:
@@ -350,8 +374,68 @@ namespace DifficultyFeature
                     Debug.Log("[AlarmEventHandler] Starting RPC_PlayMarioStarSound coroutine.");
                     avatarTinyRevert.StartCoroutine(TinyPlayerEvent.TinyPlayerManager.RevertTinyEffectRPC(avatarTinyRevert));
                     break;
+                case 5: // Gagnant du walkie
+                    BetterWalkieTakkie.HandleWinnerEvent(photonEvent);
+                    break;
+                case 7: // Gagnant du walkie
+                    if (photonEvent.CustomData is object[] dataWalkie && dataWalkie.Length == 1)
+                    {
+                        string steamId = (string)dataWalkie[0];
+                        ExecuteWalkieEvent(steamId);
+                    }
+
+                    break;
 
 
+            }
+        }
+
+        private void ExecuteWalkieEvent(string steamID)
+        {
+            PlayerAvatar player = PlayerAvatar.instance;
+            if (steamID.ToString() != SemiFunc.PlayerGetSteamID(player))
+            {
+                Debug.LogError($"[DifficultyFeature] PlayerAvatar non trouvé pour ViewID={steamID}.");
+                return;
+            }
+            // Exécuter l'événement
+            BetterWalkieTakkie t = new BetterWalkieTakkie();
+            t.Execute();
+            t.ToggleWalkie(true);
+            Debug.Log($"[DifficultyFeature] Événement BetterWalkieTakkie exécuté pour {steamID}.");
+        }
+
+        private void RequestWalkieWinnerCheck()
+        {
+            PlayerAvatar playerAvatar = PlayerAvatar.instance;
+            if (playerAvatar == null) return;
+
+            string steamID = SemiFunc.PlayerGetSteamID(playerAvatar); 
+            if (string.IsNullOrEmpty(steamID))
+            {
+                Debug.LogError("[DifficultyFeature] Impossible d'obtenir le SteamID du joueur.");
+                return;
+            }
+
+            PhotonView view = playerAvatar.GetComponent<PhotonView>();
+            if (view == null)
+            {
+                Debug.LogError("[DifficultyFeature] PhotonView introuvable sur PlayerAvatar.");
+                return;
+            }
+
+            object[] content = new object[] { view.ViewID, steamID };
+            var options = new RaiseEventOptions { Receivers = ReceiverGroup.MasterClient };
+            PhotonNetwork.RaiseEvent(EVENT_CHECK_WALKIE_WINNER, content, options, SendOptions.SendReliable);
+            Debug.Log($"[DifficultyFeature] Demande envoyée à l'host pour vérifier le gagnant: SteamID={steamID}, ViewID={view.ViewID}");
+        }
+
+        private void OnDestroy()
+        {
+            if (subscribed && PhotonNetwork.NetworkingClient != null)
+            {
+                PhotonNetwork.NetworkingClient.EventReceived -= OnEvent;
+                Debug.Log("[WalkiePlugin] Event listener unregistered from OnDestroy()");
             }
         }
 
