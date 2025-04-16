@@ -52,7 +52,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("SK0R3N")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+071e4fa3f6123d324c830ef22c72a88ec64e95ed")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+03f4258cbbad73b99568467835ee6df59b56e8bb")]
 [assembly: System.Reflection.AssemblyProductAttribute("DifficultyFeature")]
 [assembly: System.Reflection.AssemblyTitleAttribute("DifficultyFeature")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

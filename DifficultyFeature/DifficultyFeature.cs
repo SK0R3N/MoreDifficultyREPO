@@ -57,8 +57,8 @@ namespace DifficultyFeature
             //SlotEventManager.RegisterEvent(new GoldenGunEvent());
             //SlotEventManager.RegisterEvent(new RevealMapEvent());
             //SlotEventManager.RegisterEvent(new RandomTeleportEvent());
-            //SlotEventManager.RegisterEvent(new TimeSlowEvent());
-            SlotEventManager.RegisterEvent(new SurviveHorror());
+            SlotEventManager.RegisterEvent(new TimeSlowEvent());
+            //SlotEventManager.RegisterEvent(new SurviveHorror());
             //SlotEventManager.RegisterEvent(new BetterWalkieTakkie());
             //SlotEventManager.RegisterEvent(new AlarmEvent());
             //SlotEventManager.RegisterEvent(new MarioStarEvent());
@@ -223,6 +223,9 @@ namespace DifficultyFeature
 
                         Debug.Log($"[WalkieNet] Walkie state updated: ViewID {viewID} -> {(enabled ? "ON" : "OFF")}");
                     }
+                    break;
+                case 105: // Gagnant du walkie
+                    BetterWalkieTakkie.HandleWinnerEvent(photonEvent);
                     break;
 
                 case 1:

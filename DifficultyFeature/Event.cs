@@ -787,7 +787,7 @@ namespace DifficultyFeature
         public class BetterWalkieTakkie : ISlotEvent
         {
             internal static BetterWalkieTakkie instance { get; private set; } = null;
-            public string EventName => "Time Slow";
+            public string EventName => "BetterWalkieTakkie";
             public string IconName => "icon_timeslow";
             public string Asset => "TestAsset";
 
@@ -799,12 +799,19 @@ namespace DifficultyFeature
             internal static AssetBundle walkyBundle;
             internal static Material waveformMat;
             internal static bool Toggle;
-
+            private static string currentWinnerSteamID = null; // Stocke temporairement le gagnant
+            private const byte EVENT_WALKIE_WINNER = 105; // Nouveau code pour l'événement Photon
 
             public void Execute()
             {
                 instance = this;
-                //ToggleWalkie(true);
+                // Initialiser ou charger le gagnant au démarrage
+                if (PhotonNetwork.IsMasterClient)
+                {
+                    string saveFileName = DifficultySaveContext.CurrentSaveFileName;
+                    currentWinnerSteamID = DifficultySaveManager.LoadWalkieWinner(saveFileName);
+                    SyncWinnerToClients(currentWinnerSteamID);
+                }
             }
 
             public void ToggleWalkie(bool enabled)
@@ -812,7 +819,6 @@ namespace DifficultyFeature
                 PlayerAvatar player = PlayerAvatar.instance;
                 Transform display = player.mapToolController.transform.Find("Controller/Visuals/Hide/Main Spring Target/Main Spring/Base Offset/Bob/Stick/stick/Main Unit/Display Spring Target/Display Spring/Counter/display_1x1");
 
-                // Rechercher dynamiquement si besoin
                 foreach (Transform t in player.mapToolController.VisualTransform.GetComponentsInChildren<Transform>(true))
                     if (t.name == "display_1x1")
                         display = t;
@@ -826,15 +832,16 @@ namespace DifficultyFeature
                 Toggle = enabled;
                 if (enabled)
                 {
-                    // Sauvegarde le matériel de base
+                    // Déterminer le gagnant (par exemple, le joueur qui active)
+                    string playerSteamID = SemiFunc.PlayerGetSteamID(player); // Hypothétique, à adapter
+                    SetWinner(playerSteamID);
+
                     WalkieReceiver.walkieEnabled = true;
                     if (originalDisplayMaterial == null)
                         originalDisplayMaterial = renderer.material;
 
-                    // Créer RenderTexture
                     waveformRenderTexture = new RenderTexture(512, 512, 16);
 
-                    // Créer caméra
                     waveformCameraGO = new GameObject("WaveformCamera");
                     var cam = waveformCameraGO.AddComponent<Camera>();
                     cam.orthographic = true;
@@ -846,7 +853,6 @@ namespace DifficultyFeature
                     waveformCameraGO.transform.position = new UnityEngine.Vector3(0, 5f, 0);
                     waveformCameraGO.transform.rotation = UnityEngine.Quaternion.Euler(90f, 0, 0);
 
-                    // Créer waveform
                     waveformVisualizerGO = new GameObject("WaveformVisualizer");
                     waveformVisualizerGO.layer = LayerMask.NameToLayer("TopLayerOnly");
                     var lr = waveformVisualizerGO.AddComponent<LineRenderer>();
@@ -861,7 +867,6 @@ namespace DifficultyFeature
                     var vis = waveformVisualizerGO.AddComponent<WaveformVisualizer>();
                     vis.voiceChat = player.voiceChat;
 
-                    // Charger asset bundle et matériel
                     string bundlePath = Path.Combine(Paths.PluginPath, "SK0R3N-DifficultyFeature", "assets", "walky");
                     if (walkyBundle == null)
                         walkyBundle = AssetBundle.LoadFromFile(bundlePath);
@@ -886,22 +891,15 @@ namespace DifficultyFeature
 
                     renderer.material = waveformMaterialInstance;
 
-                    // Ajout du WalkieReceiver si manquant
                     if (!player.GetComponent<WalkieReceiver>())
                         player.gameObject.AddComponent<WalkieReceiver>();
                 }
                 else
                 {
-                    // Restauration matériel original
                     WalkieReceiver.walkieEnabled = false;
-                    Debug.Log(originalDisplayMaterial);
                     if (originalDisplayMaterial != null)
                         renderer.material = originalDisplayMaterial;
 
-                    Debug.Log(waveformCameraGO);
-                    Debug.Log(waveformVisualizerGO);
-                    Debug.Log(waveformRenderTexture);
-                    // Suppression objets
                     if (waveformCameraGO != null) GameObject.Destroy(waveformCameraGO);
                     if (waveformVisualizerGO != null) GameObject.Destroy(waveformVisualizerGO);
                     if (waveformRenderTexture != null) waveformRenderTexture.Release();
@@ -912,6 +910,61 @@ namespace DifficultyFeature
                 }
             }
 
+            private void SetWinner(string steamID)
+            {
+                if (PhotonNetwork.IsMasterClient)
+                {
+                    currentWinnerSteamID = steamID;
+                    string saveFileName = DifficultySaveContext.CurrentSaveFileName;
+                    DifficultySaveManager.SaveWalkieWinner(steamID);
+                    SyncWinnerToClients(steamID);
+                    Debug.Log($"[BetterWalkieTakkie] Host set winner: {steamID}");
+                }
+                else
+                {
+                    // Les clients envoient une demande à l'host
+                    PhotonView view = PlayerAvatar.instance.GetComponent<PhotonView>();
+                    if (view != null)
+                    {
+                        object[] content = new object[] { view.ViewID, steamID };
+                        var options = new RaiseEventOptions { Receivers = ReceiverGroup.MasterClient };
+                        PhotonNetwork.RaiseEvent(EVENT_WALKIE_WINNER, content, options, SendOptions.SendReliable);
+                    }
+                }
+            }
+
+            // Synchroniser le gagnant à tous les clients
+            private void SyncWinnerToClients(string steamID)
+            {
+                if (!PhotonNetwork.IsMasterClient) return;
+
+                object[] content = new object[] { steamID };
+                var options = new RaiseEventOptions { Receivers = ReceiverGroup.All };
+                PhotonNetwork.RaiseEvent(EVENT_WALKIE_WINNER, content, options, SendOptions.SendReliable);
+                Debug.Log($"[BetterWalkieTakkie] Synced winner to all clients: {steamID}");
+            }
+
+            // Recevoir les événements réseau
+            public static void HandleWinnerEvent(EventData photonEvent)
+            {
+                if (photonEvent.Code != EVENT_WALKIE_WINNER) return;
+
+                object[] data = (object[])photonEvent.CustomData;
+                if (PhotonNetwork.IsMasterClient && data.Length == 2)
+                {
+                    // L'host reçoit une demande de client
+                    int viewID = (int)data[0];
+                    string steamID = (string)data[1];
+                    instance.SetWinner(steamID); // Met à jour et synchronise
+                }
+                else if (data.Length == 1)
+                {
+                    // Tous les clients reçoivent la synchro du gagnant
+                    string steamID = (string)data[0];
+                    currentWinnerSteamID = steamID;
+                    Debug.Log($"[BetterWalkieTakkie] Received winner: {steamID}");
+                }
+            }
 
             [RequireComponent(typeof(LineRenderer))]
             public class WaveformVisualizer : MonoBehaviour
