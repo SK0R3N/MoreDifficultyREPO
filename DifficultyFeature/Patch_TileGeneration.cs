@@ -36,6 +36,9 @@ namespace MyMOD
                 int width = gen.LevelWidth;
                 int height = gen.LevelHeight;
 
+                Log.LogInfo("[CustomTileGen]" + gen.LevelWidth);
+                Log.LogInfo("[CustomTileGen]" + gen.LevelHeight);
+
                 FieldInfo gridField = AccessTools.Field(typeof(LevelGenerator), "LevelGrid");
                 var grid = new LevelGenerator.Tile[width, height];
 
@@ -48,7 +51,7 @@ namespace MyMOD
                 }
 
                 // Special case: skip custom logic for shop level
-                if (gen.Level == RunManager.instance.levelShop || gen.Level == RunManager.instance.levelArena)
+                if (gen.Level == RunManager.instance.levelShop || gen.Level == RunManager.instance.levelArena || gen.Level == RunManager.instance.levelMainMenu || gen.Level == RunManager.instance.levelLobby || gen.Level == RunManager.instance.levelLobbyMenu)
                 {
                     grid[width / 2, 0].active = true;
                     grid[width / 2, 0].first = true;
@@ -59,7 +62,6 @@ namespace MyMOD
 
                     gridField.SetValue(gen, grid);
                     waitingField.SetValue(gen, false);
-                    Log.LogInfo("[CustomTileGen] Shop level detected, using default configuration.");
                     yield break;
                 }
 
@@ -72,14 +74,11 @@ namespace MyMOD
 
                 var difficulty = DifficultyManager.CurrentDifficulty;
 
-                Log.LogInfo($"[Difficulty] DeadEndAmount → {gen.Level.PassageMaxAmount}");
-                Log.LogInfo($"[Difficulty] DeadEndAmount → {DifficultyManager2.GetPassageMultiplier(difficulty)}");
-                gen.Level.PassageMaxAmount = Mathf.RoundToInt(gen.Level.PassageMaxAmount * DifficultyManager2.GetPassageMultiplier(difficulty));
-                Log.LogInfo($"[Difficulty] PassageMaxAmount → {gen.Level.PassageMaxAmount}");
 
-                Log.LogInfo($"[Difficulty] DeadEndAmount → {gen.DeadEndAmount}");
-                Log.LogInfo($"[Difficulty] DeadEndAmount → {DifficultyManager2.GetDeadEndMultiplier(difficulty)}");
-                gen.DeadEndAmount = Mathf.RoundToInt(gen.DeadEndAmount * DifficultyManager2.GetDeadEndMultiplier(difficulty));
+                gen.Level.PassageMaxAmount = Mathf.RoundToInt(gen.Level.PassageMaxAmount);
+                Log.LogInfo($"[Difficulty] PassageAmount → {gen.Level.PassageMaxAmount}");
+
+                gen.DeadEndAmount = Mathf.RoundToInt(gen.DeadEndAmount);
                 Log.LogInfo($"[Difficulty] DeadEndAmount → {gen.DeadEndAmount}");
 
                 int baseExtraction = DifficultyManager2.GetFixedExtractionAmount(difficulty);
@@ -154,20 +153,21 @@ namespace MyMOD
                         currentX = newX;
                         currentY = newY;
                         moduleCount--;
+                        tentative = 0;
                     }
                     else
                     {
                         if (tentative >= tentativeMax)
                         {
                             Log.LogError($"[Difficulty] ModuleAmount → {moduleCount} Failed)");
-                            moduleCount--;
+                            moduleCount = 0;
                             success = false;
                             notworking = false;
                         }
                         tentative++;
                     }
-
                     yield return null;
+
                 }
 
                 if(notworking)
@@ -243,8 +243,9 @@ namespace MyMOD
                     yield return null;
                 }
 
+                PrintMiniMap(grid);
                 if (success) { 
-                    PrintMiniMap(grid);
+
                     gridField.SetValue(gen, grid);
                     waitingField.SetValue(gen, false);
                     Log.LogInfo("[CustomTileGen] Tile generation completed.");

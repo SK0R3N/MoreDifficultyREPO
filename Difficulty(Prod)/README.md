@@ -33,6 +33,7 @@ This mod enhances REPO by adding:
 
 **Know Issue :**
 - Difficulty mode not in SinglePlayer.
+- PlayerScaling mod not supported with this mod.
 
 **What's next ?**
 
