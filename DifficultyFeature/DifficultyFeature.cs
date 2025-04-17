@@ -3,6 +3,7 @@ using BepInEx.Logging;
 using HarmonyLib;
 using MyMOD;
 using Photon.Pun;
+using SingularityGroup.HotReload;
 using System;
 using UnityEngine;
 
@@ -15,6 +16,7 @@ namespace DifficultyFeature
         internal new static ManualLogSource Logger => Instance._logger;
         private ManualLogSource _logger => base.Logger;
         internal Harmony? Harmony { get; set; }
+        private RoomCullingManager cullingManager;
 
         public static int DifficultyLevel { get; set; } = 1;
 
@@ -84,7 +86,23 @@ namespace DifficultyFeature
 
             if (Input.GetKeyDown(KeyCode.F6))
             {
-                LogAllGameObjectsInScene();
+
+                // Créer un GameObject pour RoomCullingManager
+                GameObject cullingManagerObject = new GameObject("RoomCullingManager");
+                DontDestroyOnLoad(cullingManagerObject); // Persister entre les scènes
+                RoomCullingManager cullingManager = cullingManagerObject.AddComponent<RoomCullingManager>();
+
+                // Trouver le joueur
+                GameObject player = GameObject.FindGameObjectWithTag("Player"); // À adapter selon R.E.P.O.
+
+                if (player == null)
+                {
+                    Debug.LogError("[DifficultyFeaturePlugin] Failed to find Player.");
+                    return;
+                }
+
+                // Initialiser RoomCullingManager
+                cullingManager.Initialize(player);
             }
         }
 
