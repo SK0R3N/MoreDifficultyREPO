@@ -31,6 +31,7 @@ using UnityEngine.Rendering;
 using UnityEngine.UI;
 using UnityEngine.UIElements;
 using UnityEngine.Video;
+using static DifficultyFeature.Event;
 
 
 
@@ -38,6 +39,39 @@ namespace DifficultyFeature
 {
     internal class Event
     {
+        //Non Event
+        public class GenerateText
+        {
+            public static IEnumerable SemiBotTalk(string message, Color possessColor, float typingspeed = 1f)
+            {
+                ChatManager.instance.PossessChatScheduleStart(10);
+                ChatManager.instance.PossessChat(ChatManager.PossessChatID.LovePotion, message, typingspeed, possessColor);
+                ChatManager.instance.PossessChatScheduleEnd();
+
+                yield return new WaitForSeconds(5F);
+            }
+
+            public static IEnumerable SemiBotTalk(string message, float typingspeed = 1f)
+            {
+                ChatManager.instance.PossessChatScheduleStart(10);
+                Color possessColor = new Color(1f, 0.3f, 0.6f, 1f);
+                ChatManager.instance.PossessChat(ChatManager.PossessChatID.LovePotion, message, typingspeed, possessColor);
+                ChatManager.instance.PossessChatScheduleEnd();
+
+                yield return new WaitForSeconds(5F);
+            }
+
+            public static string GenerateAffectionateSentence(List<string> listsentence)
+            {
+                string text = listsentence[UnityEngine.Random.Range(0, listsentence.Count)]; ;
+                return text;
+
+            }
+        }
+
+
+        //Event
+
         public class TinyPlayerEvent : MonoBehaviour, ISlotEvent
         {
             public string EventName => "TinyPlayer";
@@ -61,6 +95,8 @@ namespace DifficultyFeature
 
             public void Execute()
             {
+
+
                 if (isActive)
                 {
                     Debug.Log("[TinyPlayerEvent] Already active.");
@@ -72,6 +108,15 @@ namespace DifficultyFeature
                     Debug.LogError("[TinyPlayerEvent] GameDirector or PlayerList is null.");
                     return;
                 }
+
+                List<string> TinyEvent = new List<string> { "I got a little mushroom, does it make me stronger? Nope, but I’m taking it anyway.",
+                    "They told me to think big. I saw a mushroom… error 0_0.",
+                    "I thought it was a power-up… now the doors are too big and my dignity’s too small.",
+                    "Congratulations! You’ve unlocked Mini Mode. Zero benefits. Enjoy.",
+                    "Power-up? Nope, just a mushroom that made me shrink. My confidence too, by the way.",
+                    "I tried to jump on the mushroom, but it jumped me instead. Game over." };
+
+                GenerateText.SemiBotTalk(GenerateText.GenerateAffectionateSentence(TinyEvent));
 
                 isActive = true;
                 GameObject managerObj = new GameObject("TinyPlayerManager");
@@ -203,20 +248,20 @@ namespace DifficultyFeature
                 {
                     Debug.Log("I am dead 5");
                     if (player == null)
-                        {
-                            return null;
-                        }
+                    {
+                        return null;
+                    }
                     Debug.Log("I am dead 6");
                     // Restaurer la taille
                     player.playerTransform.localScale = UnityEngine.Vector3.one;
-                        if (player.playerAvatarVisuals != null)
-                        {
-                            player.playerAvatarVisuals.transform.localScale = UnityEngine.Vector3.one;
-                        }
+                    if (player.playerAvatarVisuals != null)
+                    {
+                        player.playerAvatarVisuals.transform.localScale = UnityEngine.Vector3.one;
+                    }
 
-                        // Restaurer la caméra
-                        if (player.isLocal)
-                        {
+                    // Restaurer la caméra
+                    if (player.isLocal)
+                    {
                         player.localCamera.transform.position -= UnityEngine.Vector3.up * cameraOffsetY;
                         player.playerAvatarCollision.transform.localScale = UnityEngine.Vector3.one * scaleFactor;
 
@@ -239,17 +284,17 @@ namespace DifficultyFeature
 
                         }
                         Debug.Log($"[TinyPlayerEvent] Restored camera for {player.playerName}");
-                        }
+                    }
 
-                        // Restaurer la voix
-                        if (player.voiceChat != null)
-                        {
-                            player.voiceChat.OverridePitchCancel();
-                            Debug.Log($"[TinyPlayerEvent] Restored voice for {player.playerName}");
-                        }
+                    // Restaurer la voix
+                    if (player.voiceChat != null)
+                    {
+                        player.voiceChat.OverridePitchCancel();
+                        Debug.Log($"[TinyPlayerEvent] Restored voice for {player.playerName}");
+                    }
 
-                        // Supprimer le modificateur de saut
-                        TinyJumpModifier modifier = player.GetComponent<TinyJumpModifier>();
+                    // Supprimer le modificateur de saut
+                    TinyJumpModifier modifier = player.GetComponent<TinyJumpModifier>();
                     if (modifier != null)
                     {
                         Destroy(modifier);
@@ -305,7 +350,7 @@ namespace DifficultyFeature
                     {
                         //Debug.Log("Je crouch");
                         UnityEngine.Vector3 currentPos = __instance.transform.position;
-                        float minY = 0.2f; 
+                        float minY = 0.2f;
                         //Debug.Log("[Ce qu'on veut]" + minY);
                         //Debug.Log("[Ce qu'il est]" + __instance.localCamera.transform.position.y);
                         if (__instance.localCamera.transform.position.y < currentPos.y)
@@ -340,17 +385,17 @@ namespace DifficultyFeature
                             }
                         }
                         else if (__instance.isGrounded)
-                    {
-                        //Debug.Log("[cam] y :" + __instance.localCamera.transform.position.y);
-                        //Debug.Log("[position] y :" + (__instance.transform.position.y + 0.4));
-                        if (__instance.localCamera.transform.position.y > (__instance.transform.position.y + 0.4) || __instance.transform.position.y < 0.2)
                         {
-                            UnityEngine.Vector3 currentPos = __instance.transform.position;
-                            //Debug.Log("cam trop basse");
-                            __instance.localCamera.transform.position = new UnityEngine.Vector3(currentPos.x, __instance.transform.position.y + 0.2f, currentPos.z);
+                            //Debug.Log("[cam] y :" + __instance.localCamera.transform.position.y);
+                            //Debug.Log("[position] y :" + (__instance.transform.position.y + 0.4));
+                            if (__instance.localCamera.transform.position.y > (__instance.transform.position.y + 0.4) || __instance.transform.position.y < 0.2)
+                            {
+                                UnityEngine.Vector3 currentPos = __instance.transform.position;
+                                //Debug.Log("cam trop basse");
+                                __instance.localCamera.transform.position = new UnityEngine.Vector3(currentPos.x, __instance.transform.position.y + 0.2f, currentPos.z);
+                            }
                         }
-                    }
-                    
+
 
                     }
                 }
@@ -388,6 +433,16 @@ namespace DifficultyFeature
                     Debug.LogWarning("[ExplosiveDeathEvent] EnemyDirector.instance is null. Cannot execute.");
                     return;
                 }
+                List<string> ExplosiveDeath = new List<string>
+                {
+                    "All mobs are creeper? AAAAAW MAN!",
+                    "No need for the Big Nuke mod, the enemies are handling it now.",
+                    "Achievement unlocked: Survived a kamikaze duck. Reward: more explosions.",
+                    "New game rule: Don’t touch anything unless you love explosions.",
+                    "Mobs go boom? My new hobby is sprinting and screaming."
+                };
+
+                GenerateText.SemiBotTalk(GenerateText.GenerateAffectionateSentence(ExplosiveDeath));
 
                 Debug.Log($"[ExplosiveDeathEvent] Starting explosive death event for {effectDuration} seconds.");
                 isExplosiveDeathActive = true;
@@ -607,6 +662,15 @@ namespace DifficultyFeature
 
                 if (deadHeads.Count > 0)
                 {
+                    List<string> RevivePlayer = new List<string>
+                    {
+                        "Respawn activated! Now you're alive… and broke.",
+                        "You awaken, revived by an unseen force, ready to loot again.",
+                        "Revived by an unknown force, you’re thrust back into action."
+                    };
+
+                    GenerateText.SemiBotTalk(GenerateText.GenerateAffectionateSentence(RevivePlayer));
+
                     // Sélectionner une tête aléatoire
                     PlayerDeathHead selectedHead = deadHeads[UnityEngine.Random.Range(0, deadHeads.Count)];
                     Debug.Log($"[RandomRevivePotion] Reviving player associated with head: {selectedHead.gameObject.name}");
@@ -616,6 +680,12 @@ namespace DifficultyFeature
                 else
                 {
                     // Aucune tête trouvée : exécuter la logique alternative
+                    List<string> RevivePlayer = new List<string>
+                    {
+                        "I want to revive someone , but nobody dies. Maybe kill myself will resolve the problem :O",
+                        "Nobody’s dying? Damn, for once I wanted my friends to bite the dust…",
+                    };
+                    GenerateText.SemiBotTalk(GenerateText.GenerateAffectionateSentence(RevivePlayer));
                     Debug.Log("[RandomRevivePotion] No PlayerDeathHead found on the map.");
                 }
             }
@@ -666,6 +736,14 @@ namespace DifficultyFeature
 
             public void Execute()
             {
+                List<string> ExtractionPointHaulModifier = new List<string>
+                {
+                    "I'm calling Taxman, hope he will make your objective easier.",
+                    "Taxman, I'm broke, please put a lower tax."
+                };
+
+                GenerateText.SemiBotTalk(GenerateText.GenerateAffectionateSentence(ExtractionPointHaulModifier));
+
                 // Créer un GameObject si le composant n'est pas attaché
                 if (this == null || !TryGetComponent(out MonoBehaviour _))
                 {
@@ -747,6 +825,13 @@ namespace DifficultyFeature
                 string sign = percentage >= 0 ? "+" : "";
                 Debug.Log($"[ExtractionPointHaulModifier] Modifying haulGoal from {point.haulGoal} to {newHaulGoal} ({sign}{percentage:F0}%)");
 
+                List<string> ExtractionPointHaulModifier = new List<string>
+                {
+                    $"We got ({sign}{percentage:F0}%)",
+                };
+
+                GenerateText.SemiBotTalk(GenerateText.GenerateAffectionateSentence(ExtractionPointHaulModifier));
+
                 oneTimeOnly = false;
                 if (SemiFunc.IsMultiplayer())
                 {
@@ -806,6 +891,15 @@ namespace DifficultyFeature
             {
                 instance = this;
                 // Initialiser ou charger les gagnants au démarrage
+                List<string> WalkiTalki = new List<string>
+                {
+                    "New upgrade acquired. I can use the arrow to activate the walkie in the map module.",
+                    "I can now talk to my friend, if I use the arrow in the map module. Hope I'm not the only one.",
+                    "YOU HEARD ME? I HAVE A WALKIE NOW IF I USE THE ARROW IN THE MAP MODULE? YOU HEARD ME????"
+                };
+
+                GenerateText.SemiBotTalk(GenerateText.GenerateAffectionateSentence(WalkiTalki));
+
                 if (PhotonNetwork.IsMasterClient)
                 {
                     string saveFileName = DifficultySaveContext.CurrentSaveFileName;
@@ -1012,6 +1106,14 @@ namespace DifficultyFeature
                 var player = PlayerController.instance;
                 if (player == null) return;
 
+                List<string> SurvivreHorror = new List<string>
+                {
+                    "Congrats! I’ve unlocked Apocalypse Mode. I’ll need luck I think.",
+                    "The horror will begin, I need to hide fast.",
+                    "I have to hide, RIP my friend if they come."
+                };
+                GenerateText.SemiBotTalk(GenerateText.GenerateAffectionateSentence(SurvivreHorror));
+
                 int count = 15;
                 float radius = 10f;
                 UnityEngine.Vector3 center = player.transform.position;
@@ -1165,6 +1267,13 @@ namespace DifficultyFeature
                 var player = PlayerController.instance;
                 if (player == null) return;
 
+                List<string> TimeSlowEvent = new List<string>
+                {
+                    "Have to slow down for a minute.",
+                    "Slow-mo vibes, but the berserk enemies didn’t get the memo."
+                };
+                GenerateText.SemiBotTalk(GenerateText.GenerateAffectionateSentence(TimeSlowEvent));
+
                 PhotonView view = player.GetComponent<PhotonView>();
 
                 if (player.GetComponent<TimeSlowEffectController>() == null)
@@ -1275,6 +1384,14 @@ namespace DifficultyFeature
                     return;
                 }
 
+                List<string> RandomTP = new List<string>
+                {
+                    "Reality bends, teleporting to a random destination.",
+                    "The fabric of the game shifts, placing you somewhere new.",
+                    "A mysterious force relocates you to an unpredictable spot."
+                };
+                GenerateText.SemiBotTalk(GenerateText.GenerateAffectionateSentence(RandomTP));
+
                 // On prend une salle aléatoire
                 var randomModule = modules[UnityEngine.Random.Range(0, modules.Length)];
 
@@ -1285,7 +1402,7 @@ namespace DifficultyFeature
                 player.transform.position = targetPosition;
                 Debug.Log($"[RandomTP] Joueur téléporté dans {randomModule.name}");
             }
-        } //Finis (Manque vérification tp dans un trou) //Bug tp juste une fois
+        } //Finis (Manque vérification tp dans un trou) //Bug Ne tp plus
 
         public class GoldenGunEvent : ISlotEvent
         {
@@ -1302,6 +1419,15 @@ namespace DifficultyFeature
                 GameObject gunInstance2 = new GameObject();
                 try
                 {
+                    List<string> GoldenGun = new List<string>
+                    {
+                        "Golden Gun acquired! Time to shine… until the Taxman taxes it.",
+                        "Shiny gun, zero skills. The Taxman’s laughing at my shots.",
+                        "Got the Golden Gun! My confidence? Still in the shop."
+                    };
+
+                    GenerateText.SemiBotTalk(GenerateText.GenerateAffectionateSentence(GoldenGun));
+
                     gunInstance2 = PhotonNetwork.Instantiate("items/Golden_Gun", player.transform.position + player.transform.forward, UnityEngine.Quaternion.identity);
                 }
                 catch (Exception e)
@@ -1377,6 +1503,12 @@ namespace DifficultyFeature
                 var volumes = GameObject.FindObjectsOfType<RoomVolume>();
                 Debug.Log($"[RevealMapEvent] {volumes.Length} RoomVolume trouvés.");
 
+                List<string> RevealMap = new List<string>
+                {
+                    "All terrain is exposed, the map’s boundaries now clear."
+                };
+                GenerateText.SemiBotTalk(GenerateText.GenerateAffectionateSentence(RevealMap));
+
                 foreach (var room in volumes)
                 {
 
@@ -1412,6 +1544,14 @@ namespace DifficultyFeature
                     Debug.Log("[EnemyRainEvent] Enemy not found: " + enemyName);
                     return;
                 }
+
+                List<string> Duck = new List<string>
+                    {
+                        "Duck army incoming! My cart’s quacking for mercy.",
+                        "Feathers, quacks, and pain. This is my life now, thanks.",
+                        "Quackpocalypse unleashed! The shop’s out of duck repellent."
+                    };
+                GenerateText.SemiBotTalk(GenerateText.GenerateAffectionateSentence(Duck));
 
                 int count = 15;
                 float radius = 10f;
@@ -1470,6 +1610,14 @@ namespace DifficultyFeature
                 {
                     marioStarEvent = avatar.gameObject.AddComponent<MarioStarEvent>();
                 }
+
+                List<string> Mario = new List<string>
+                {
+                    "The Mario Star surges through you, granting invincibility for 20 seconds.",
+                    "The star’s light shields you, granting 20 seconds of perfect safety.",
+                    "For 20 seconds, no enemy can touch me—pure invulnerability."
+                };
+                GenerateText.SemiBotTalk(GenerateText.GenerateAffectionateSentence(Mario));
 
                 // Lancer la coroutine sur le composant attaché
                 avatar.StartCoroutine(marioStarEvent.ApplyMarioStarEffect(avatar, starClip));
@@ -1771,6 +1919,13 @@ namespace DifficultyFeature
                         player.StopCoroutine(lockRoutine);
                     }
 
+                    List<string> NoMinimap = new List<string>
+                    {
+                        "Minimap disabled. Guess I’ll follow the trail of my own tears."
+                    };
+
+                    GenerateText.SemiBotTalk(GenerateText.GenerateAffectionateSentence(NoMinimap));
+
                     lockRoutine = player.StartCoroutine(LockRoutine(seconds));
                 }
 
@@ -1798,7 +1953,7 @@ namespace DifficultyFeature
             }
         } //Finis Marche Bien
 
-        public class VideoMapEvent : ISlotEvent
+        /*public class VideoMapEvent : ISlotEvent
         {
             public string EventName => "VideoMap";
             public string IconName => "icon_video";
@@ -1920,7 +2075,7 @@ namespace DifficultyFeature
                     yield return new WaitForSeconds(0.1f); // vérifie toutes les 100 ms
                 }
             }
-        } //Probablement a retirer
+        } */ //Probablement a retirer
 
         public class AlarmEvent : ISlotEvent
         {
@@ -1948,6 +2103,13 @@ namespace DifficultyFeature
                     Debug.LogError("[AlarmEvent] No PhotonView on PlayerAvatar.");
                     return;
                 }
+                List<string> Alarm = new List<string>
+                {
+                    "ERROR, MY SYSTEM IS BROKEN.",
+                    "I don’t have error, but I need some attention, ALARM ON.",
+                    "Time to break your ear, watch out."
+                };
+                GenerateText.SemiBotTalk(GenerateText.GenerateAffectionateSentence(Alarm));
 
                 // Préparer les données de l'événement
                 object[] eventData = new object[] { photonView.ViewID, 15f }; // viewID et duration

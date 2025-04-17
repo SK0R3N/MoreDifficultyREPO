@@ -62,8 +62,8 @@ namespace DifficultyFeature
             //SlotEventManager.RegisterEvent(new RandomTeleportEvent());
             //SlotEventManager.RegisterEvent(new TimeSlowEvent());
             //SlotEventManager.RegisterEvent(new SurviveHorror());
-            SlotEventManager.RegisterEvent(new BetterWalkieTakkie());
-            //SlotEventManager.RegisterEvent(new AlarmEvent());
+            //SlotEventManager.RegisterEvent(new BetterWalkieTakkie());
+            SlotEventManager.RegisterEvent(new AlarmEvent());
             //SlotEventManager.RegisterEvent(new MarioStarEvent());
             //SlotEventManager.RegisterEvent(new ExtractionPointHaulModifier());
             //SlotEventManager.RegisterEvent(new RevivePlayerEvent());
