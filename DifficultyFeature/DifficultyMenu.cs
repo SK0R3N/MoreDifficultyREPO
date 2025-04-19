@@ -277,6 +277,16 @@ namespace MyMOD
                     DifficultyManager.ShopMultiplier = 2;
                     DifficultyManager.ValuableMultiplier = 3;
                     break;
+                case "Hardcore+":
+                    DifficultyManager.ExtractionMultiplier = 2;
+                    DifficultyManager.ExtractionMaxMultiplier = 7;
+                    DifficultyManager.PourcentageRoom1 = 20;
+                    DifficultyManager.PourcentageRoom2 = 50;
+                    DifficultyManager.PourcentageRoom3 = 30;
+                    DifficultyManager.EnemyMultiplier = 5;
+                    DifficultyManager.ShopMultiplier = 2;
+                    DifficultyManager.ValuableMultiplier = 3;
+                    break;
                 case "Nightmare":
                     DifficultyManager.ExtractionMultiplier = 3;
                     DifficultyManager.ExtractionMaxMultiplier = 9;

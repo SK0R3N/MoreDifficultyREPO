@@ -32,7 +32,7 @@ This mod enhances REPO by adding:
 | **Custom**             | Custom             | Custom       |  --------   | Full interface to configure every setting manually |
 
 **Know Issue :**
-- Difficulty mode not in SinglePlayer.
+- Vaultline Map (Tolian Levels) has no door for perfomance network.
 - PlayerScaling mod not supported with this mod.
 
 **What's next ?**
