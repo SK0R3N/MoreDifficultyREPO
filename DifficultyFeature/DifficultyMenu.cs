@@ -510,9 +510,9 @@ namespace MyMOD
                             DifficultySaveManager.SaveDifficulty("Custom"); // Save after change
                         },
                         scroll,
-                        min: 1f,
-                        max: 10f,
-                        precision: 0,
+                        min: 1.0f,
+                        max: 10.0f,
+                        precision: 1,
                         localPosition: new Vector2(0f, 70f),
                         defaultValue: DifficultyManager.ShopMultiplier,
                         prefix: "",
