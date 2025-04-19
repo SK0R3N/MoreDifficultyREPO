@@ -14,71 +14,71 @@ using static MyMOD.DifficultyManager;
 
 namespace MyMOD
 {
-    [HarmonyPatch(typeof(LevelGenerator), "SpawnConnectObject")]
-    public class NoDoorsInValticanPatch
-    {
-        private static readonly string[] DoorAndHingePrefabs = new string[]
-        {
-        "Door",
-        "Manor Door",
-        "Vaultline Door",
-        "Hinge",
-        "ModuleConnectObject"
-        };
+    //[HarmonyPatch(typeof(LevelGenerator), "SpawnConnectObject")]
+    //public class NoDoorsInValticanPatch
+    //{
+    //    private static readonly string[] DoorAndHingePrefabs = new string[]
+    //    {
+    //    "Door",
+    //    "Manor Door",
+    //    "Vaultline Door",
+    //    "Hinge",
+    //    "ModuleConnectObject"
+    //    };
 
-        static bool Prefix(Vector3 position, Vector3 rotation)
-        {
-            // Vérifier si la carte est Valtican
-            bool isValtican = false;
-            try
-            {
-                if (PhotonNetwork.CurrentRoom != null && PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue("curScn", out var sceneName))
-                {
-                    isValtican = sceneName.ToString().Equals("Valtican", StringComparison.OrdinalIgnoreCase);
-                }
-            }
-            catch (Exception e)
-            {
-                Debug.LogError($"[NoDoorsInValticanPatch] Error checking map name: {e.Message}");
-            }
-
-
-                // Vérifier si l'objet à instancier est une porte ou une charnière
-                GameObject connectObject = LevelGenerator.Instance.Level.ConnectObject;
-                if (connectObject == null)
-                {
-                    Debug.LogWarning("[NoDoorsInValticanPatch] Level.ConnectObject is null in Valtican");
-                    return true; // Autorise l'instanciation si null (peut-être aucun objet)
-                }
-
-                string prefabName = connectObject.name;
-                bool isDoorOrHinge = DoorAndHingePrefabs.Any(p => prefabName.Contains(p, StringComparison.OrdinalIgnoreCase));
-
-                // Vérifier les sous-objets pour les Hinge
-                if (!isDoorOrHinge)
-                {
-                    var photonViews = connectObject.GetComponentsInChildren<PhotonView>(true);
-                    foreach (var pv in photonViews)
-                    {
-                        if (DoorAndHingePrefabs.Any(p => pv.gameObject.name.Contains(p, StringComparison.OrdinalIgnoreCase)))
-                        {
-                            isDoorOrHinge = true;
-                            prefabName = $"{prefabName} (contains {pv.gameObject.name})";
-                            break;
-                        }
-                    }
-                }
-
-                if (isDoorOrHinge)
-                {
-                    Debug.Log($"[NoDoorsInValticanPatch] Blocked spawn of prefab: {prefabName} in Valtican at position: {position}");
-                    return false; // Empêche l'instanciation
-                }
+    //    static bool Prefix(Vector3 position, Vector3 rotation)
+    //    {
+    //        Vérifier si la carte est Valtican
+    //        bool isValtican = false;
+    //        try
+    //        {
+    //            if (PhotonNetwork.CurrentRoom != null && PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue("curScn", out var sceneName))
+    //            {
+    //                isValtican = sceneName.ToString().Equals("Valtican", StringComparison.OrdinalIgnoreCase);
+    //            }
+    //        }
+    //        catch (Exception e)
+    //        {
+    //            Debug.LogError($"[NoDoorsInValticanPatch] Error checking map name: {e.Message}");
+    //        }
 
 
-            return true; // Autorise l'instanciation pour les autres objets ou cartes
-        }
-    }
+    //        Vérifier si l'objet à instancier est une porte ou une charnière
+    //            GameObject connectObject = LevelGenerator.Instance.Level.ConnectObject;
+    //        if (connectObject == null)
+    //        {
+    //            Debug.LogWarning("[NoDoorsInValticanPatch] Level.ConnectObject is null in Valtican");
+    //            return true; // Autorise l'instanciation si null (peut-être aucun objet)
+    //        }
+
+    //        string prefabName = connectObject.name;
+    //        bool isDoorOrHinge = DoorAndHingePrefabs.Any(p => prefabName.Contains(p, StringComparison.OrdinalIgnoreCase));
+
+    //        Vérifier les sous - objets pour les Hinge
+    //            if (!isDoorOrHinge)
+    //        {
+    //            var photonViews = connectObject.GetComponentsInChildren<PhotonView>(true);
+    //            foreach (var pv in photonViews)
+    //            {
+    //                if (DoorAndHingePrefabs.Any(p => pv.gameObject.name.Contains(p, StringComparison.OrdinalIgnoreCase)))
+    //                {
+    //                    isDoorOrHinge = true;
+    //                    prefabName = $"{prefabName} (contains {pv.gameObject.name})";
+    //                    break;
+    //                }
+    //            }
+    //        }
+
+    //        if (isDoorOrHinge)
+    //        {
+    //            Debug.Log($"[NoDoorsInValticanPatch] Blocked spawn of prefab: {prefabName} in Valtican at position: {position}");
+    //            return false; // Empêche l'instanciation
+    //        }
+
+
+    //        return true; // Autorise l'instanciation pour les autres objets ou cartes
+    //    }
+    //}
 
 
     [HarmonyPatch(typeof(LevelGenerator), "TileGeneration")]

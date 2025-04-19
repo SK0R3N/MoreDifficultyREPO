@@ -10,6 +10,7 @@ using SingularityGroup.HotReload;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Security.Cryptography;
 using System.Text;
 using TMPro;
 using UnityEngine;
@@ -202,15 +203,150 @@ namespace MyMOD
             popupPage.OpenPage(openOnTop: true);
         }
 
-        private static void UpdateDifficultyRightPopup(string difficulty)
+        private static void ApplyPreset(string Difficulty)
         {
-            if(popupRight != null || popupPageDifficulty != null)
+            switch (Difficulty)
             {
-                popupRight.ClosePage(closePagesAddedOnTop: false);
-                popupPageDifficulty.ClosePage(closePagesAddedOnTop: false);
+                case "Normal":
+                    DifficultyManager.ExtractionMultiplier = 0;
+                    DifficultyManager.ExtractionMaxMultiplier = 3;
+                    DifficultyManager.PourcentageRoom1 = 100;
+                    DifficultyManager.PourcentageRoom2 = 0;
+                    DifficultyManager.PourcentageRoom3 = 0;
+                    DifficultyManager.EnemyMultiplier = 2;
+                    DifficultyManager.ShopMultiplier = 1;
+                    DifficultyManager.ValuableMultiplier = 1;
+                    break;
+                case "Normal+":
+                    DifficultyManager.ExtractionMultiplier = 0;
+                    DifficultyManager.ExtractionMaxMultiplier = 3;
+                    DifficultyManager.PourcentageRoom1 = 70;
+                    DifficultyManager.PourcentageRoom2 = 30;
+                    DifficultyManager.PourcentageRoom3 = 0;
+                    DifficultyManager.EnemyMultiplier = 2;
+                    DifficultyManager.ShopMultiplier = 1;
+                    DifficultyManager.ValuableMultiplier = 1;
+                    break;
+                case "Normal++":
+                    DifficultyManager.ExtractionMultiplier = 0;
+                    DifficultyManager.ExtractionMaxMultiplier = 3;
+                    DifficultyManager.PourcentageRoom1 = 40;
+                    DifficultyManager.PourcentageRoom2 = 40;
+                    DifficultyManager.PourcentageRoom3 = 20;
+                    DifficultyManager.EnemyMultiplier = 2;
+                    DifficultyManager.ShopMultiplier = 1;
+                    DifficultyManager.ValuableMultiplier = 1;
+                    break;
+                case "Hard":
+                    DifficultyManager.ExtractionMultiplier = 1;
+                    DifficultyManager.ExtractionMaxMultiplier = 5;
+                    DifficultyManager.PourcentageRoom1 = 100;
+                    DifficultyManager.PourcentageRoom2 = 0;
+                    DifficultyManager.PourcentageRoom3 = 0;
+                    DifficultyManager.EnemyMultiplier = 3;
+                    DifficultyManager.ShopMultiplier = 1.5f;
+                    DifficultyManager.ValuableMultiplier = 2;
+                    break;
+                case "Hard+":
+                    DifficultyManager.ExtractionMultiplier = 1;
+                    DifficultyManager.ExtractionMaxMultiplier = 5;
+                    DifficultyManager.PourcentageRoom1 = 70;
+                    DifficultyManager.PourcentageRoom2 = 30;
+                    DifficultyManager.PourcentageRoom3 = 0;
+                    DifficultyManager.EnemyMultiplier = 3;
+                    DifficultyManager.ShopMultiplier = 1.5f;
+                    DifficultyManager.ValuableMultiplier = 2;
+                    break;
+                case "Hard++":
+                    DifficultyManager.ExtractionMultiplier = 1;
+                    DifficultyManager.ExtractionMaxMultiplier = 5;
+                    DifficultyManager.PourcentageRoom1 = 40;
+                    DifficultyManager.PourcentageRoom2 = 40;
+                    DifficultyManager.PourcentageRoom3 = 20;
+                    DifficultyManager.EnemyMultiplier = 3;
+                    DifficultyManager.ShopMultiplier = 1.5f;
+                    DifficultyManager.ValuableMultiplier = 2;
+                    break;
+                case "Hardcore":
+                    DifficultyManager.ExtractionMultiplier = 2;
+                    DifficultyManager.ExtractionMaxMultiplier = 7;
+                    DifficultyManager.PourcentageRoom1 = 40;
+                    DifficultyManager.PourcentageRoom2 = 60;
+                    DifficultyManager.PourcentageRoom3 = 0;
+                    DifficultyManager.EnemyMultiplier = 5;
+                    DifficultyManager.ShopMultiplier = 2;
+                    DifficultyManager.ValuableMultiplier = 3;
+                    break;
+                case "Nightmare":
+                    DifficultyManager.ExtractionMultiplier = 3;
+                    DifficultyManager.ExtractionMaxMultiplier = 9;
+                    DifficultyManager.PourcentageRoom1 = 30;
+                    DifficultyManager.PourcentageRoom2 = 40;
+                    DifficultyManager.PourcentageRoom3 = 30;
+                    DifficultyManager.EnemyMultiplier = 7;
+                    DifficultyManager.ShopMultiplier = 2.5f;
+                    DifficultyManager.ValuableMultiplier = 4;
+                    break;
+                case "IsThatEvenPossible":
+                    DifficultyManager.ExtractionMultiplier = 4;
+                    DifficultyManager.ExtractionMaxMultiplier = 11;
+                    DifficultyManager.PourcentageRoom1 = 10;
+                    DifficultyManager.PourcentageRoom2 = 30;
+                    DifficultyManager.PourcentageRoom3 = 60;
+                    DifficultyManager.EnemyMultiplier = 10;
+                    DifficultyManager.ShopMultiplier = 3f;
+                    DifficultyManager.ValuableMultiplier = 5;
+                    break;
             }
 
-            // Supprimer les anciens éléments
+        }
+
+        private static void UpdateSliders()
+        {
+            // Trouver tous les sliders dans le popup
+            var sliders = popupRight.GetComponentsInChildren<REPOSlider>();
+           
+            foreach (var slider in sliders)
+            {
+                Debug.Log(slider.name);
+                switch (slider.name)
+                {
+                    case "Float Slider - Extraction Amount":
+                        slider.SetValue(DifficultyManager.ExtractionMultiplier, true);
+                        break;
+                    case "Float Slider - MaxExtraction Amount":
+                        slider.SetValue(DifficultyManager.ExtractionMaxMultiplier, true);
+                        break;
+                    case "Float Slider - Room Difficulty 1 (%)":
+                        slider.SetValue(DifficultyManager.PourcentageRoom1, true);
+                        break;
+                    case "Float Slider - Room Difficulty 2 (%)":
+                        slider.SetValue(DifficultyManager.PourcentageRoom2, true);
+                        break;
+                    case "Float Slider - Room Difficulty 3 (%)":
+                        slider.SetValue(DifficultyManager.PourcentageRoom3, true);
+                        break;
+                    case "Float Slider - Number of Enemy":
+                        slider.SetValue(DifficultyManager.EnemyMultiplier, true);
+                        break;
+                    case "Float Slider - Shop Price Multiplier":
+                        slider.SetValue(DifficultyManager.ShopMultiplier, true);
+                        break;
+                    case "Float Slider - Valuable Multiplier":
+                        slider.SetValue(DifficultyManager.ValuableMultiplier, true);
+                        break;
+                }
+            }
+        }
+
+        private static void UpdateDifficultyRightPopup(string difficulty)
+        {
+            if (popupRight != null || popupPageDifficulty != null)
+            {
+                popupRight?.ClosePage(closePagesAddedOnTop: false);
+                popupPageDifficulty?.ClosePage(closePagesAddedOnTop: false);
+            }
+
             popupRight = MenuAPI.CreateREPOPopupPage("Difficulty Details", REPOPopupPage.PresetSide.Right, shouldCachePage: true, pageDimmerVisibility: true, spacing: 2.5f);
             popupPageDifficulty = MenuAPI.CreateREPOPopupPage("Difficulty Details", REPOPopupPage.PresetSide.Right, shouldCachePage: true, pageDimmerVisibility: true);
 
@@ -221,36 +357,67 @@ namespace MyMOD
                 Debug.LogWarning("[MyMod] Right popup not initialized yet.");
                 return;
             }
-            Debug.Log($"[MyMod] Oppening: {SelectedDifficulty}");
+
+            Debug.Log($"[MyMod] Opening: {SelectedDifficulty}");
             if (difficulty == "Custom")
             {
                 popupRight.OpenPage(openOnTop: true);
                 popupRight.AddElementToScrollView(scroll =>
                 {
+                    string[] options = new string[] {"None" ,"Normal", "Normal+", "Normal++", "Hard", "Hard+", "Hard++", "Hardcore", "Hardcore+", "Nightmare", "IsThatEvenPossible" };
+
+                    // CreateREPOSlider(string text, string description, Action<string> onOptionChanged, Transform parent, string[] stringOptions, string defaultOption, Vector2 localPosition = default(Vector2), string prefix = "", string postfix = "", REPOSlider.BarBehavior barBehavior = REPOSlider.BarBehavior.UpdateWithValue)
+                    var difficultySlider = MenuAPI.CreateREPOSlider(
+                        text: "Difficulty Preset",
+                        description: "",
+                        onOptionChanged: (string difficulty) =>
+                        {
+                            ApplyPreset(difficulty);
+                            UpdateSliders();
+                            DifficultyManager.DifficultyPreset = difficulty;
+                            DifficultySaveManager.SaveDifficulty("Custom");
+                        },
+                        parent: scroll,
+                        stringOptions: options,
+                        defaultOption: DifficultyManager.DifficultyPreset,
+                        localPosition: new Vector2(0f, 210f),
+                        prefix: "",
+                        postfix: "",
+                        barBehavior: REPOSlider.BarBehavior.UpdateWithValue
+
+                    );
 
                     MenuAPI.CreateREPOSlider(
-                           "Extraction Amount",
-                           "",
-                           val => DifficultyManager.ExtractionMultiplier = (int)val,
-                           scroll,
-                           min: 0,
-                           max: 12,
-                           localPosition: new Vector2(0f, 210f),
-                           precision: 0,
-                           defaultValue: DifficultyManager.ExtractionMultiplier,
-                           prefix: "",
-                           postfix: "",
-                           barBehavior: REPOSlider.BarBehavior.UpdateWithValue
-                       );
-
-                    MenuAPI.CreateREPOSlider(
-                        "MaxExtraction Amount",
+                        "Extraction Amount",
                         "",
-                        val => DifficultyManager.ExtractionMaxMultiplier = (int)val,
+                        val =>
+                        {
+                            DifficultyManager.ExtractionMultiplier = (int)val;
+                            DifficultySaveManager.SaveDifficulty("Custom"); // Save after change
+                        },
                         scroll,
                         min: 0,
                         max: 12,
                         localPosition: new Vector2(0f, 190f),
+                        precision: 0,
+                        defaultValue: DifficultyManager.ExtractionMultiplier,
+                        prefix: "",
+                        postfix: "",
+                        barBehavior: REPOSlider.BarBehavior.UpdateWithValue
+                    );
+
+                    MenuAPI.CreateREPOSlider(
+                        "MaxExtraction Amount",
+                        "",
+                        val =>
+                        {
+                            DifficultyManager.ExtractionMaxMultiplier = (int)val;
+                            DifficultySaveManager.SaveDifficulty("Custom"); // Save after change
+                        },
+                        scroll,
+                        min: 0,
+                        max: 12,
+                        localPosition: new Vector2(0f, 170f),
                         precision: 0,
                         defaultValue: DifficultyManager.ExtractionMaxMultiplier,
                         prefix: "",
@@ -258,116 +425,122 @@ namespace MyMOD
                         barBehavior: REPOSlider.BarBehavior.UpdateWithValue
                     );
 
-
-                    //MenuAPI.CreateREPOSlider(
-                    //        $"Room Amount",
-                    //        description: "Allows you to update the default number of rooms in the dungeon. Note: If you don't put enough rooms for too many extraction rooms, you may find yourself with pregen problems (inaccessible room, door leading to a void, etc.)",
-                    //        onValueChanged: val => DifficultyManager.RoomNumber = (int)val,
-                    //        parent: scroll,
-                    //        min: 8,
-                    //        max: 30,
-                    //        precision: 0,
-                    //        localPosition: new Vector2(0f, 190f),
-                    //        defaultValue: DifficultyManager.RoomNumber,
-                    //        prefix: "",
-                    //        postfix: "",
-                    //        barBehavior: REPOSlider.BarBehavior.UpdateWithValue
-                    //    );
+                    MenuAPI.CreateREPOSlider(
+                        $"Room Difficulty 1 (%)",
+                        "",
+                        val =>
+                        {
+                            DifficultyManager.PourcentageRoom1 = (int)val;
+                            DifficultySaveManager.SaveDifficulty("Custom"); // Save after change
+                        },
+                        scroll,
+                        min: 0,
+                        max: 100,
+                        precision: 0,
+                        localPosition: new Vector2(0f, 150f),
+                        defaultValue: DifficultyManager.PourcentageRoom1,
+                        prefix: "",
+                        postfix: "",
+                        barBehavior: REPOSlider.BarBehavior.UpdateWithValue
+                    );
 
                     MenuAPI.CreateREPOSlider(
-                           $"Room Difficulty 1 (%)",
-                           description: "",
-                           onValueChanged: val => DifficultyManager.PourcentageRoom1 = (int)val,
-                           parent: scroll,
-                           min: 0,
-                           max: 100,
-                           precision: 0,
-                           localPosition: new Vector2(0f, 170f),
-                           defaultValue: DifficultyManager.PourcentageRoom1,
-                           prefix: "",
-                           postfix: "",
-                           barBehavior: REPOSlider.BarBehavior.UpdateWithValue
-                         );
+                        $"Room Difficulty 2 (%)",
+                        "",
+                        val =>
+                        {
+                            DifficultyManager.PourcentageRoom2 = (int)val;
+                            DifficultySaveManager.SaveDifficulty("Custom"); // Save after change
+                        },
+                        scroll,
+                        min: 0,
+                        max: 100,
+                        precision: 0,
+                        localPosition: new Vector2(0f, 130f),
+                        defaultValue: DifficultyManager.PourcentageRoom2,
+                        prefix: "",
+                        postfix: "",
+                        barBehavior: REPOSlider.BarBehavior.UpdateWithValue
+                    );
 
                     MenuAPI.CreateREPOSlider(
-                           $"Room Difficulty 2 (%)",
-                           description: "",
-                           onValueChanged: val => DifficultyManager.PourcentageRoom2 = (int)val,
-                           parent: scroll,
-                           min: 1,
-                           max: 100,
-                           precision: 0,
-                           localPosition: new Vector2(0f, 150f),
-                           defaultValue: DifficultyManager.PourcentageRoom2,
-                           prefix: "",
-                           postfix: "",
-                           barBehavior: REPOSlider.BarBehavior.UpdateWithValue
-                         );
+                        $"Room Difficulty 3 (%)",
+                        "",
+                        val =>
+                        {
+                            DifficultyManager.PourcentageRoom3 = (int)val;
+                            DifficultySaveManager.SaveDifficulty("Custom"); // Save after change
+                        },
+                        scroll,
+                        min: 0,
+                        max: 100,
+                        precision: 0,
+                        localPosition: new Vector2(0f, 110f),
+                        defaultValue: DifficultyManager.PourcentageRoom3,
+                        prefix: "",
+                        postfix: "",
+                        barBehavior: REPOSlider.BarBehavior.UpdateWithValue
+                    );
 
                     MenuAPI.CreateREPOSlider(
-                           $"Room Difficulty 3 (%)",
-                           description: "",
-                           onValueChanged: val => DifficultyManager.PourcentageRoom3 = (int)val,
-                           parent: scroll,
-                           min: 1,
-                           max: 100,
-                           precision: 0,
-                           localPosition: new Vector2(0f, 130f),
-                           defaultValue: DifficultyManager.PourcentageRoom3,
-                           prefix: "",
-                           postfix: "",
-                           barBehavior: REPOSlider.BarBehavior.UpdateWithValue
-                        );
+                        $"Number of Enemy",
+                        "",
+                        val =>
+                        {
+                            DifficultyManager.EnemyMultiplier = (int)val;
+                            DifficultySaveManager.SaveDifficulty("Custom"); // Save after change
+                        },
+                        scroll,
+                        min: 0,
+                        max: 20,
+                        precision: 0,
+                        localPosition: new Vector2(0f, 90f),
+                        defaultValue: DifficultyManager.EnemyMultiplier,
+                        prefix: "",
+                        postfix: "",
+                        barBehavior: REPOSlider.BarBehavior.UpdateWithValue
+                    );
 
                     MenuAPI.CreateREPOSlider(
-                                $"Enemy Multiplier",
-                                description: "",
-                                onValueChanged: val => DifficultyManager.EnemyMultiplier = (int)val,
-                                parent: scroll,
-                                min: 1,
-                                max: 10,
-                                precision: 0,
-                                localPosition: new Vector2(0f, 110f),
-                                defaultValue: DifficultyManager.EnemyMultiplier,
-                                prefix: "",
-                                postfix: "",
-                                barBehavior: REPOSlider.BarBehavior.UpdateWithValue
-                        );
+                        $"Shop Price Multiplier",
+                        "",
+                        val =>
+                        {
+                            DifficultyManager.ShopMultiplier = val;
+                            DifficultySaveManager.SaveDifficulty("Custom"); // Save after change
+                        },
+                        scroll,
+                        min: 1f,
+                        max: 10f,
+                        precision: 0,
+                        localPosition: new Vector2(0f, 70f),
+                        defaultValue: DifficultyManager.ShopMultiplier,
+                        prefix: "",
+                        postfix: "",
+                        barBehavior: REPOSlider.BarBehavior.UpdateWithValue
+                    );
 
                     MenuAPI.CreateREPOSlider(
-                            $"Shop Price Multiplier",
-                            description: "",
-                            onValueChanged: val => DifficultyManager.ShopMultiplier = (int)val,
-                            parent: scroll,
-                            min: 1,
-                            max: 10,
-                            precision: 0,
-                            localPosition: new Vector2(0f, 90f),
-                            defaultValue: DifficultyManager.ShopMultiplier,
-                            prefix: "",
-                            postfix: "",
-                            barBehavior: REPOSlider.BarBehavior.UpdateWithValue
-                        );
-
-                    MenuAPI.CreateREPOSlider(
-                            $"Valuable Multiplier",
-                            description: "",
-                            onValueChanged: val => DifficultyManager.ValuableMultiplier = (int)val,
-                            parent: scroll,
-                            min: 1,
-                            max: 10,
-                            precision: 0,
-                            localPosition: new Vector2(0f, 70f),
-                            defaultValue: DifficultyManager.ValuableMultiplier,
-                            prefix: "",
-                            postfix: "",
-                            barBehavior: REPOSlider.BarBehavior.UpdateWithValue
-                            );
+                        $"Valuable Multiplier",
+                        "",
+                        val =>
+                        {
+                            DifficultyManager.ValuableMultiplier = (int)val;
+                            DifficultySaveManager.SaveDifficulty("Custom"); // Save after change
+                        },
+                        scroll,
+                        min: 1,
+                        max: 10,
+                        precision: 0,
+                        localPosition: new Vector2(0f, 50f),
+                        defaultValue: DifficultyManager.ValuableMultiplier,
+                        prefix: "",
+                        postfix: "",
+                        barBehavior: REPOSlider.BarBehavior.UpdateWithValue
+                    );
 
                     return scroll as RectTransform;
-                    });
-
-
+                });
             }
             else
             {

@@ -105,7 +105,7 @@ namespace MyMOD
                 case DifficultyManager.DifficultyLevel.Hardcore: return baseCount + 3;
                 case DifficultyManager.DifficultyLevel.Nightmare: return baseCount + 5;
                 case DifficultyManager.DifficultyLevel.IsThatEvenPossible: return baseCount + 8;
-                case DifficultyManager.DifficultyLevel.Custom: return baseCount * DifficultyManager.EnemyMultiplier;
+                case DifficultyManager.DifficultyLevel.Custom: return DifficultyManager.EnemyMultiplier;
                 default: return baseCount;
             }
         }

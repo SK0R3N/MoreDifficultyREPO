@@ -20,7 +20,7 @@ namespace MyMOD
 
         public static DifficultyLevel CurrentDifficulty = DifficultyLevel.Normal;
         public static int EnemyMultiplier = 1;
-        public static int ShopMultiplier = 1;
+        public static float ShopMultiplier = 1;
         public static int ExtractionMultiplier = 1;
         public static int ExtractionMaxMultiplier = 1;
         public static int ValuableMultiplier = 1;
@@ -28,6 +28,7 @@ namespace MyMOD
         public static int PourcentageRoom1 = 100;
         public static int PourcentageRoom2 = 0;
         public static int PourcentageRoom3 = 0;
+        public static string DifficultyPreset = "None";
     }
 
 }

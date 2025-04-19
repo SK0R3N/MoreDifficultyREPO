@@ -68,36 +68,6 @@ namespace DifficultyFeature
                 }
             }
 
-            // Trouver tous les PhotonView actifs
-            //var photonViews = FindObjectsOfType<PhotonView>();
-            //if (photonViews.Length != lastPhotonViews.Length)
-            //{
-            //    // Loguer les nouveaux ViewID
-            //    foreach (var view in photonViews)
-            //    {
-            //        if (view == null || view.ViewID == 0) continue;
-
-            //        bool isNew = !System.Array.Exists(lastPhotonViews, v => v != null && v.ViewID == view.ViewID);
-            //        if (isNew)
-            //        {
-            //            GameObject go = view.gameObject;
-            //            string objectName = go != null ? go.name : "Unknown";
-            //            string prefabName = view.name ?? "None";
-            //            string owner = view.Owner != null ? $"Player {view.Owner.ActorNumber} ({view.Owner.NickName})" : "Room (Scene)";
-            //            string componentInfo = GetComponentInfo(go);
-
-            //            Log.LogInfo($"[ViewIDLogger] Assigned ViewID: {view.ViewID} | Object: {objectName} | Prefab: {prefabName} | Owner: {owner} | Components: {componentInfo}");
-            //        }
-            //    }
-
-            //    // Mettre à jour la liste des ViewID connus
-            //    lastPhotonViews = photonViews;
-
-            //    // Loguer le nombre total d'objets réseau
-            //    Log.LogInfo($"[ViewIDMonitor] Current networked objects: {PhotonNetwork.ViewCount}");
-            //}
-
-
             GameObject lobbyPage = GameObject.Find("Menu Page Lobby(Clone)");
             if (lobbyPage != null && PhotonNetwork.IsMasterClient)
             {
@@ -133,24 +103,6 @@ namespace DifficultyFeature
 
             if (Input.GetKeyDown(KeyCode.F6))
             {
-
-                //    // Créer un GameObject pour RoomCullingManager
-                //    GameObject cullingManagerObject = new GameObject("RoomCullingManager");
-                //    DontDestroyOnLoad(cullingManagerObject); // Persister entre les scènes
-                //    RoomCullingManager cullingManager = cullingManagerObject.AddComponent<RoomCullingManager>();
-
-                //    // Trouver le joueur
-                //    GameObject player = GameObject.FindGameObjectWithTag("Player"); // À adapter selon R.E.P.O.
-
-                //    if (player == null)
-                //    {
-                //        Debug.LogError("[DifficultyFeaturePlugin] Failed to find Player.");
-                //        return;
-                //    }
-
-                //    // Initialiser RoomCullingManager
-                //    cullingManager.Initialize(player);
-                //}
                 Logger.LogInfo("[ListViewIDsCommand] Listing all assigned ViewIDs...");
 
                 // Get all PhotonViews in the scene
@@ -222,5 +174,53 @@ namespace DifficultyFeature
             }
             return path;
         }
+
+
+        // Trouver tous les PhotonView actifs
+        //var photonViews = FindObjectsOfType<PhotonView>();
+        //if (photonViews.Length != lastPhotonViews.Length)
+        //{
+        //    // Loguer les nouveaux ViewID
+        //    foreach (var view in photonViews)
+        //    {
+        //        if (view == null || view.ViewID == 0) continue;
+
+        //        bool isNew = !System.Array.Exists(lastPhotonViews, v => v != null && v.ViewID == view.ViewID);
+        //        if (isNew)
+        //        {
+        //            GameObject go = view.gameObject;
+        //            string objectName = go != null ? go.name : "Unknown";
+        //            string prefabName = view.name ?? "None";
+        //            string owner = view.Owner != null ? $"Player {view.Owner.ActorNumber} ({view.Owner.NickName})" : "Room (Scene)";
+        //            string componentInfo = GetComponentInfo(go);
+
+        //            Log.LogInfo($"[ViewIDLogger] Assigned ViewID: {view.ViewID} | Object: {objectName} | Prefab: {prefabName} | Owner: {owner} | Components: {componentInfo}");
+        //        }
+        //    }
+
+        //    // Mettre à jour la liste des ViewID connus
+        //    lastPhotonViews = photonViews;
+
+        //    // Loguer le nombre total d'objets réseau
+        //    Log.LogInfo($"[ViewIDMonitor] Current networked objects: {PhotonNetwork.ViewCount}");
+        //}
+
+        //    // Créer un GameObject pour RoomCullingManager
+        //    GameObject cullingManagerObject = new GameObject("RoomCullingManager");
+        //    DontDestroyOnLoad(cullingManagerObject); // Persister entre les scènes
+        //    RoomCullingManager cullingManager = cullingManagerObject.AddComponent<RoomCullingManager>();
+
+        //    // Trouver le joueur
+        //    GameObject player = GameObject.FindGameObjectWithTag("Player"); // À adapter selon R.E.P.O.
+
+        //    if (player == null)
+        //    {
+        //        Debug.LogError("[DifficultyFeaturePlugin] Failed to find Player.");
+        //        return;
+        //    }
+
+        //    // Initialiser RoomCullingManager
+        //    cullingManager.Initialize(player);
+        //}
     }
 }
