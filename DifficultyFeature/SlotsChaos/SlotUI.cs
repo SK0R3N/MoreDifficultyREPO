@@ -8,7 +8,7 @@ using System.Text;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace DifficultyFeature
+namespace DifficultyFeature.SlotsChaos
 {
     public class SlotMachineLoader : MonoBehaviour
     {
@@ -69,7 +69,7 @@ namespace DifficultyFeature
 
             if (currentInstance != null)
             {
-                GameObject.Destroy(currentInstance);
+                UnityEngine.Object.Destroy(currentInstance);
             }
 
             GameObject healthUI = GameObject.Find("Health");
@@ -89,8 +89,8 @@ namespace DifficultyFeature
 
             Debug.Log("[SlotAssetLoader] SlotMachineUI added to HUD Canvas.");
 
-            currentInstance = GameObject.Instantiate(slotPrefab);
-           // currentInstance.transform.localScale = Vector3.zero;
+            currentInstance = UnityEngine.Object.Instantiate(slotPrefab);
+            // currentInstance.transform.localScale = Vector3.zero;
             currentInstance.name = "SlotMachineUI_Instance";
             currentInstance.transform.SetParent(hudCanvas, false);
             Debug.Log($"[SlotAssetLoader] Slot parented under: {hudCanvas.name}");
@@ -105,7 +105,7 @@ namespace DifficultyFeature
 
             CoroutineHelper.Instance.StartCoroutine(DelayedTrigger(slotScript));
 
-            
+
 
         }
 
@@ -119,7 +119,7 @@ namespace DifficultyFeature
         {
             if (currentInstance != null)
             {
-                GameObject.Destroy(currentInstance);
+                UnityEngine.Object.Destroy(currentInstance);
                 currentInstance = null;
                 Debug.Log("[SlotAssetLoader] SlotMachineUI destroyed.");
             }

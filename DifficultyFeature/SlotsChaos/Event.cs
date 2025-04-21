@@ -25,6 +25,7 @@ using System.Text;
 using System.Xml.Linq;
 using Unity.VisualScripting;
 using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 using UnityEngine.Rendering;
@@ -42,23 +43,30 @@ namespace DifficultyFeature
         //Non Event
         public class GenerateText
         {
-            public static IEnumerable SemiBotTalk(string message, Color possessColor, float typingspeed = 1f)
-            {
-                ChatManager.instance.PossessChatScheduleStart(10);
-                ChatManager.instance.PossessChat(ChatManager.PossessChatID.LovePotion, message, typingspeed, possessColor);
-                ChatManager.instance.PossessChatScheduleEnd();
+            //public static void SemiBotTalk(string message, Color possessColor, float typingspeed = 1f, Action onComplete = null)
+            //{
+            //    ChatManager.instance.PossessChatScheduleStart(10);
+            //    ChatManager.instance.PossessChat(ChatManager.PossessChatID.LovePotion, message, typingspeed, possessColor);
+            //    ChatManager.instance.PossessChatScheduleEnd();
 
-                yield return new WaitForSeconds(5F);
-            }
+            //    onComplete?.Invoke();
+            //}
 
-            public static IEnumerable SemiBotTalk(string message, float typingspeed = 1f)
+            public static void SemiBotTalk(string message, float typingspeed = 0.3f, Action onComplete = null)
             {
                 ChatManager.instance.PossessChatScheduleStart(10);
                 Color possessColor = new Color(1f, 0.3f, 0.6f, 1f);
-                ChatManager.instance.PossessChat(ChatManager.PossessChatID.LovePotion, message, typingspeed, possessColor);
-                ChatManager.instance.PossessChatScheduleEnd();
 
-                yield return new WaitForSeconds(5F);
+                // Créer un UnityEvent pour le callback
+                UnityEvent onCompleteEvent = new UnityEvent();
+                if (onComplete != null)
+                {
+                    onCompleteEvent.AddListener(() => onComplete.Invoke());
+                }
+
+                // Passer le UnityEvent à PossessChat
+                ChatManager.instance.PossessChat(ChatManager.PossessChatID.LovePotion, message, typingspeed, possessColor, 0f, false, 0, onCompleteEvent);
+                ChatManager.instance.PossessChatScheduleEnd();
             }
 
             public static string GenerateAffectionateSentence(List<string> listsentence)
@@ -79,13 +87,12 @@ namespace DifficultyFeature
             public string Asset => "TinyPlayerAsset";
 
             private static bool isActive = false;
-            private static float duration = 60f; // Durée de l'effet : 60 secondes
-            private static float scaleFactor = 0.2f; // Taille réduite
-            private static float jumpMultiplier = 3f; // Sauts 3x plus hauts
-            private static float voicePitch = 1.5f; // Voix plus aiguë
-            private static float cameraOffsetY = -1.2f; // Décalage caméra pour joueurs minuscules
+            private static float duration = 60f;
+            private static float scaleFactor = 0.2f;
+            private static float jumpMultiplier = 3f;
+            private static float voicePitch = 1.5f;
+            private static float cameraOffsetY = -1.2f;
             private static float checkInterval = 0.1f;
-
 
             private void Awake()
             {
@@ -95,28 +102,36 @@ namespace DifficultyFeature
 
             public void Execute()
             {
+                CoroutineRunner.instance.StartCoroutine(ExecuteCoroutine());
+            }
 
-
+            private IEnumerator ExecuteCoroutine()
+            {
                 if (isActive)
                 {
                     Debug.Log("[TinyPlayerEvent] Already active.");
-                    return;
+                    yield break;
                 }
 
                 if (GameDirector.instance == null || GameDirector.instance.PlayerList == null)
                 {
                     Debug.LogError("[TinyPlayerEvent] GameDirector or PlayerList is null.");
-                    return;
+                    yield break;
                 }
 
-                List<string> TinyEvent = new List<string> { "I got a little mushroom, does it make me stronger? Nope, but I’m taking it anyway.",
-                    "They told me to think big. I saw a mushroom… error 0_0.",
-                    "I thought it was a power-up… now the doors are too big and my dignity’s too small.",
-                    "Congratulations! You’ve unlocked Mini Mode. Zero benefits. Enjoy.",
-                    "Power-up? Nope, just a mushroom that made me shrink. My confidence too, by the way.",
-                    "I tried to jump on the mushroom, but it jumped me instead. Game over." };
+                List<string> TinyEvent = new List<string>
+            {
+                "I got a little mushroom, does it make me stronger? Nope, but I’m taking it anyway.",
+                "They told me to think big. I saw a mushroom… error 0_0.",
+                "I thought it was a power-up… now the doors are too big and my dignity’s too small.",
+                "Congratulations! You’ve unlocked Mini Mode. Zero benefits. Enjoy.",
+                "Power-up? Nope, just a mushroom that made me shrink. My confidence too, by the way.",
+                "I tried to jump on the mushroom, but it jumped me instead. Game over."
+            };
 
-                GenerateText.SemiBotTalk(GenerateText.GenerateAffectionateSentence(TinyEvent));
+                bool isSemiBotTalkComplete = false;
+                GenerateText.SemiBotTalk(GenerateText.GenerateAffectionateSentence(TinyEvent), 0.3f, () => isSemiBotTalkComplete = true);
+                yield return new WaitUntil(() => isSemiBotTalkComplete);
 
                 isActive = true;
                 GameObject managerObj = new GameObject("TinyPlayerManager");
@@ -342,7 +357,6 @@ namespace DifficultyFeature
                 {
                     if (!__instance.isLocal && !IsTinyPlayerActive)
                     {
-                        Debug.Log("Nop marche pas");
                         return; // Ne s'applique qu'au joueur local pendant l'événement tiny
                     }
 
@@ -400,7 +414,7 @@ namespace DifficultyFeature
                     }
                 }
             }
-        } //Bug actuelle , clip le sol quand on se fait écraser
+        } //quelques bugs a vérif
 
         public class ExplosiveDeathEvent : MonoBehaviour, ISlotEvent
         {
@@ -409,10 +423,10 @@ namespace DifficultyFeature
             public string Asset => "ExplosiveDeathAsset";
 
             [SerializeField]
-            private GameObject explosionPrefab; // Prefab d'explosion assigné dans l'Inspector
+            private GameObject explosionPrefab;
             private static bool isExplosiveDeathActive = false;
-            private static float effectDuration = 180f; // Durée de l'effet (3 minutes)
-            private static float checkInterval = 0.1f; // Intervalle de vérification des ennemis
+            private static float effectDuration = 180f;
+            private static float checkInterval = 0.1f;
 
             private void Awake()
             {
@@ -422,27 +436,35 @@ namespace DifficultyFeature
 
             public void Execute()
             {
+                CoroutineRunner.instance.StartCoroutine(ExecuteCoroutine());
+            }
+
+            private IEnumerator ExecuteCoroutine()
+            {
                 if (isExplosiveDeathActive)
                 {
                     Debug.LogWarning("[ExplosiveDeathEvent] Explosive death event is already active. Ignoring.");
-                    return;
+                    yield break;
                 }
 
                 if (EnemyDirector.instance == null)
                 {
                     Debug.LogWarning("[ExplosiveDeathEvent] EnemyDirector.instance is null. Cannot execute.");
-                    return;
+                    yield break;
                 }
-                List<string> ExplosiveDeath = new List<string>
-                {
-                    "All mobs are creeper? AAAAAW MAN!",
-                    "No need for the Big Nuke mod, the enemies are handling it now.",
-                    "Achievement unlocked: Survived a kamikaze duck. Reward: more explosions.",
-                    "New game rule: Don’t touch anything unless you love explosions.",
-                    "Mobs go boom? My new hobby is sprinting and screaming."
-                };
 
-                GenerateText.SemiBotTalk(GenerateText.GenerateAffectionateSentence(ExplosiveDeath));
+                List<string> ExplosiveDeath = new List<string>
+            {
+                "All mobs are creeper? AAAAAW MAN!",
+                "No need for the Big Nuke mod, the enemies are handling it now.",
+                "Achievement unlocked: Survived a kamikaze duck. Reward: more explosions.",
+                "New game rule: Don’t touch anything unless you love explosions.",
+                "Mobs go boom? My new hobby is sprinting and screaming."
+            };
+
+                bool isSemiBotTalkComplete = false;
+                GenerateText.SemiBotTalk(GenerateText.GenerateAffectionateSentence(ExplosiveDeath), 0.3f, () => isSemiBotTalkComplete = true);
+                yield return new WaitUntil(() => isSemiBotTalkComplete);
 
                 Debug.Log($"[ExplosiveDeathEvent] Starting explosive death event for {effectDuration} seconds.");
                 isExplosiveDeathActive = true;
@@ -640,38 +662,42 @@ namespace DifficultyFeature
                 }
             }
 
-        }//Finis (test a faire)
+        }
 
         public class RevivePlayerEvent : ISlotEvent
         {
             public string EventName => "Revive";
-
             public string IconName => "Revive";
-
             public string Asset => "Revive";
 
             public void Execute()
             {
+                CoroutineRunner.instance.StartCoroutine(ExecuteCoroutine());
+            }
 
+            private IEnumerator ExecuteCoroutine()
+            {
                 if (!SemiFunc.IsMasterClientOrSingleplayer())
                 {
                     Debug.Log("[RandomRevivePotion] Not master client or singleplayer. Skipping revive logic.");
-                    return;
+                    yield break;
                 }
+
                 List<PlayerDeathHead> deadHeads = FindAllPlayerDeathHeads();
 
                 if (deadHeads.Count > 0)
                 {
                     List<string> RevivePlayer = new List<string>
-                    {
-                        "Respawn activated! Now you're alive… and broke.",
-                        "You awaken, revived by an unseen force, ready to loot again.",
-                        "Revived by an unknown force, you’re thrust back into action."
-                    };
+                {
+                    "Respawn activated! Now you're alive… and broke.",
+                    "You awaken, revived by an unseen force, ready to loot again.",
+                    "Revived by an unknown force, you’re thrust back into action."
+                };
 
-                    GenerateText.SemiBotTalk(GenerateText.GenerateAffectionateSentence(RevivePlayer));
+                    bool isSemiBotTalkComplete = false;
+                    GenerateText.SemiBotTalk(GenerateText.GenerateAffectionateSentence(RevivePlayer), 0.3f, () => isSemiBotTalkComplete = true);
+                    yield return new WaitUntil(() => isSemiBotTalkComplete);
 
-                    // Sélectionner une tête aléatoire
                     PlayerDeathHead selectedHead = deadHeads[UnityEngine.Random.Range(0, deadHeads.Count)];
                     Debug.Log($"[RandomRevivePotion] Reviving player associated with head: {selectedHead.gameObject.name}");
                     selectedHead.FlashEyeRPC(true);
@@ -679,13 +705,16 @@ namespace DifficultyFeature
                 }
                 else
                 {
-                    // Aucune tête trouvée : exécuter la logique alternative
                     List<string> RevivePlayer = new List<string>
-                    {
-                        "I want to revive someone , but nobody dies. Maybe kill myself will resolve the problem :O",
-                        "Nobody’s dying? Damn, for once I wanted my friends to bite the dust…",
-                    };
-                    GenerateText.SemiBotTalk(GenerateText.GenerateAffectionateSentence(RevivePlayer));
+                {
+                    "I want to revive someone , but nobody dies. Maybe kill myself will resolve the problem :O",
+                    "Nobody’s dying? Damn, for once I wanted my friends to bite the dust…"
+                };
+
+                    bool isSemiBotTalkComplete = false;
+                    GenerateText.SemiBotTalk(GenerateText.GenerateAffectionateSentence(RevivePlayer), 0.3f, () => isSemiBotTalkComplete = true);
+                    yield return new WaitUntil(() => isSemiBotTalkComplete);
+
                     Debug.Log("[RandomRevivePotion] No PlayerDeathHead found on the map.");
                 }
             }
@@ -693,15 +722,11 @@ namespace DifficultyFeature
             private List<PlayerDeathHead> FindAllPlayerDeathHeads()
             {
                 List<PlayerDeathHead> deadHeads = new List<PlayerDeathHead>();
-
-                // Vérifier chaque joueur dans GameDirector.PlayerList
                 if (GameDirector.instance != null && GameDirector.instance.PlayerList != null)
                 {
                     foreach (PlayerAvatar player in GameDirector.instance.PlayerList)
                     {
                         if (player == null) continue;
-
-                        // Vérifier si le joueur a un PlayerDeathHead actif
                         PlayerDeathHead deathHead = player.playerDeathHead;
                         if (deathHead != null && deathHead.gameObject.activeInHierarchy)
                         {
@@ -713,16 +738,9 @@ namespace DifficultyFeature
                 {
                     Debug.LogWarning("[RevivePlayerEvent] GameDirector.instance or PlayerList is null.");
                 }
-
                 return deadHeads;
             }
-
-            // Exemple de méthode pour la logique alternative (à remplacer par ton code)
-            private void AlternativeLogic()
-            {
-                Debug.Log("[RandomRevivePotion] Alternative logic triggered.");
-            }
-        } //Finis Marche bien
+        }
 
         public class ExtractionPointHaulModifier : MonoBehaviourPunCallbacks, ISlotEvent
         {
@@ -731,38 +749,42 @@ namespace DifficultyFeature
 
             public string EventName => "Extraction";
             public string IconName => "Extraction";
-            public string Asset => "TestAsset"; // Remplacé throw par une valeur par défaut
+            public string Asset => "TestAsset";
             public bool oneTimeOnly = true;
 
             public void Execute()
             {
+                CoroutineRunner.instance.StartCoroutine(ExecuteCoroutine());
+            }
+
+            private IEnumerator ExecuteCoroutine()
+            {
                 List<string> ExtractionPointHaulModifier = new List<string>
-                {
-                    "I'm calling Taxman, hope he will make your objective easier.",
-                    "Taxman, I'm broke, please put a lower tax."
-                };
+            {
+                "I'm calling Taxman, hope he will make your objective easier.",
+                "Taxman, I'm broke, please put a lower tax."
+            };
 
-                GenerateText.SemiBotTalk(GenerateText.GenerateAffectionateSentence(ExtractionPointHaulModifier));
+                bool isSemiBotTalkComplete = false;
+                GenerateText.SemiBotTalk(GenerateText.GenerateAffectionateSentence(ExtractionPointHaulModifier), 0.3f, () => isSemiBotTalkComplete = true);
+                yield return new WaitUntil(() => isSemiBotTalkComplete);
 
-                // Créer un GameObject si le composant n'est pas attaché
                 if (this == null || !TryGetComponent(out MonoBehaviour _))
                 {
                     Debug.LogWarning("[ExtractionPointHaulModifier] Component not attached. Creating new GameObject.");
                     GameObject modifierObj = new GameObject("ExtractionPointHaulModifier");
                     ExtractionPointHaulModifier modifier = modifierObj.AddComponent<ExtractionPointHaulModifier>();
-                    modifier.Execute(); // Appeler Execute sur la nouvelle instance
-                    return;
+                    modifier.Execute();
+                    yield break;
                 }
 
-                // Vérifier RoundDirector
                 if (RoundDirector.instance == null)
                 {
                     Debug.LogWarning("[ExtractionPointHaulModifier] RoundDirector.instance is null. Waiting for initialization.");
                     StartCoroutine(WaitForRoundDirector());
-                    return;
+                    yield break;
                 }
 
-                // Démarrer la vérification immédiatement
                 StartCheck();
             }
 
@@ -826,11 +848,13 @@ namespace DifficultyFeature
                 Debug.Log($"[ExtractionPointHaulModifier] Modifying haulGoal from {point.haulGoal} to {newHaulGoal} ({sign}{percentage:F0}%)");
 
                 List<string> ExtractionPointHaulModifier = new List<string>
-                {
-                    $"We got ({sign}{percentage:F0}%)",
-                };
+            {
+                $"We got ({sign}{percentage:F0}%)",
+            };
 
-                GenerateText.SemiBotTalk(GenerateText.GenerateAffectionateSentence(ExtractionPointHaulModifier));
+                bool isSemiBotTalkComplete = false;
+                GenerateText.SemiBotTalk(GenerateText.GenerateAffectionateSentence(ExtractionPointHaulModifier), 0.3f, () => isSemiBotTalkComplete = true);
+                // Note : Pas d'attente ici car c'est un événement secondaire
 
                 oneTimeOnly = false;
                 if (SemiFunc.IsMultiplayer())
@@ -867,7 +891,7 @@ namespace DifficultyFeature
             {
                 StopAllCoroutines();
             }
-        } // Finis marche bien (check a faire pour le multi)
+        }
 
         public class BetterWalkieTakkie : ISlotEvent
         {
@@ -884,21 +908,28 @@ namespace DifficultyFeature
             internal static AssetBundle walkyBundle;
             internal static Material waveformMat;
             internal static bool Toggle;
-            private static HashSet<string> currentWinnerSteamIDs = new HashSet<string>(); // Ensemble de gagnants
-            private const byte EVENT_WALKIE_WINNER = 5; // Code pour l'événement Photon
+            private static HashSet<string> currentWinnerSteamIDs = new HashSet<string>();
+            private const byte EVENT_WALKIE_WINNER = 5;
 
             public void Execute()
             {
-                instance = this;
-                // Initialiser ou charger les gagnants au démarrage
-                List<string> WalkiTalki = new List<string>
-                {
-                    "New upgrade acquired. I can use the arrow to activate the walkie in the map module.",
-                    "I can now talk to my friend, if I use the arrow in the map module. Hope I'm not the only one.",
-                    "YOU HEARD ME? I HAVE A WALKIE NOW IF I USE THE ARROW IN THE MAP MODULE? YOU HEARD ME????"
-                };
+                CoroutineRunner.instance.StartCoroutine(ExecuteCoroutine());
+            }
 
-                GenerateText.SemiBotTalk(GenerateText.GenerateAffectionateSentence(WalkiTalki));
+            private IEnumerator ExecuteCoroutine()
+            {
+                instance = this;
+
+                List<string> WalkiTalki = new List<string>
+            {
+                "New upgrade acquired. I can use the arrow to activate the walkie in the map module.",
+                "I can now talk to my friend, if I use the arrow in the map module. Hope I'm not the only one.",
+                "YOU HEARD ME? I HAVE A WALKIE NOW IF I USE THE ARROW IN THE MAP MODULE? YOU HEARD ME????"
+            };
+
+                bool isSemiBotTalkComplete = false;
+                GenerateText.SemiBotTalk(GenerateText.GenerateAffectionateSentence(WalkiTalki), 0.3f, () => isSemiBotTalkComplete = true);
+                yield return new WaitUntil(() => isSemiBotTalkComplete);
 
                 if (PhotonNetwork.IsMasterClient)
                 {
@@ -910,6 +941,7 @@ namespace DifficultyFeature
 
             public void ToggleWalkie(bool enabled)
             {
+                // Logique inchangée
                 PlayerAvatar player = PlayerAvatar.instance;
                 Transform display = player.mapToolController.transform.Find("Controller/Visuals/Hide/Main Spring Target/Main Spring/Base Offset/Bob/Stick/stick/Main Unit/Display Spring Target/Display Spring/Counter/display_1x1");
 
@@ -926,7 +958,6 @@ namespace DifficultyFeature
                 Toggle = enabled;
                 if (enabled)
                 {
-                    // Ajouter le joueur comme gagnant
                     string playerSteamID = SemiFunc.PlayerGetSteamID(player);
                     AddWinner(playerSteamID);
 
@@ -1016,7 +1047,6 @@ namespace DifficultyFeature
                 }
                 else
                 {
-                    // Les clients envoient une demande à l'host
                     PhotonView view = PlayerAvatar.instance.GetComponent<PhotonView>();
                     if (view != null)
                     {
@@ -1027,7 +1057,6 @@ namespace DifficultyFeature
                 }
             }
 
-            // Synchroniser les gagnants à tous les clients
             private void SyncWinnersToClients(HashSet<string> steamIDs)
             {
                 if (!PhotonNetwork.IsMasterClient) return;
@@ -1038,7 +1067,6 @@ namespace DifficultyFeature
                 Debug.Log($"[BetterWalkieTakkie] Synced winners to all clients: {string.Join(", ", steamIDs)}");
             }
 
-            // Recevoir les événements réseau
             public static void HandleWinnerEvent(EventData photonEvent)
             {
                 if (photonEvent.Code != EVENT_WALKIE_WINNER) return;
@@ -1046,14 +1074,12 @@ namespace DifficultyFeature
                 object[] data = (object[])photonEvent.CustomData;
                 if (PhotonNetwork.IsMasterClient && data.Length == 2)
                 {
-                    // L'host reçoit une demande de client
                     int viewID = (int)data[0];
                     string steamID = (string)data[1];
-                    instance.AddWinner(steamID); // Ajoute et synchronise
+                    instance.AddWinner(steamID);
                 }
                 else if (data.Length == 1 && data[0] is string[] steamIDs)
                 {
-                    // Tous les clients reçoivent la synchro des gagnants
                     currentWinnerSteamIDs = new HashSet<string>(steamIDs);
                     Debug.Log($"[BetterWalkieTakkie] Received winners: {string.Join(", ", currentWinnerSteamIDs)}");
                 }
@@ -1088,8 +1114,7 @@ namespace DifficultyFeature
                     }
                 }
             }
-
-        } //Finis ?
+        }
 
         public class SurviveHorror : ISlotEvent
         {
@@ -1103,16 +1128,24 @@ namespace DifficultyFeature
 
             public void Execute()
             {
+                CoroutineRunner.instance.StartCoroutine(ExecuteCoroutine());
+            }
+
+            private IEnumerator ExecuteCoroutine()
+            {
                 var player = PlayerController.instance;
-                if (player == null) return;
+                if (player == null) yield break;
 
                 List<string> SurvivreHorror = new List<string>
-                {
-                    "Congrats! I’ve unlocked Apocalypse Mode. I’ll need luck I think.",
-                    "The horror will begin, I need to hide fast.",
-                    "I have to hide, RIP my friend if they come."
-                };
-                GenerateText.SemiBotTalk(GenerateText.GenerateAffectionateSentence(SurvivreHorror));
+            {
+                "Congrats! I’ve unlocked Apocalypse Mode. I’ll need luck I think.",
+                "The horror will begin, I need to hide fast.",
+                "I have to hide, RIP my friend if they come."
+            };
+
+                bool isSemiBotTalkComplete = false;
+                GenerateText.SemiBotTalk(GenerateText.GenerateAffectionateSentence(SurvivreHorror), 0.3f, () => isSemiBotTalkComplete = true);
+                yield return new WaitUntil(() => isSemiBotTalkComplete);
 
                 int count = 15;
                 float radius = 10f;
@@ -1122,7 +1155,7 @@ namespace DifficultyFeature
                 for (int i = 0; i < count; i++)
                 {
                     string enemyName = "";
-                    int difficulty = UnityEngine.Random.Range(0, 3); // 0 → Easy, 1 → Med, 2 → Hard
+                    int difficulty = UnityEngine.Random.Range(0, 3);
                     int t = 0;
 
                     switch (difficulty)
@@ -1166,7 +1199,6 @@ namespace DifficultyFeature
                     }
                 }
 
-                // Lance la suppression après 30 secondes
                 Debug.Log(spawnedEnemies.ToList());
                 PlayerController.instance.StartCoroutine(DestroyEnemiesAfterDelay(spawnedEnemies, 30f));
             }
@@ -1182,7 +1214,6 @@ namespace DifficultyFeature
                     {
                         enemy.Despawn();
                         Debug.Log($"[EnemyRainEvent] Destroyed {enemy.name}");
-
                     }
                 }
 
@@ -1254,7 +1285,7 @@ namespace DifficultyFeature
                     point.haulGoalFetched = true;
                 }
             }
-        } //Finis ?
+        }
 
         public class TimeSlowEvent : ISlotEvent
         {
@@ -1264,15 +1295,23 @@ namespace DifficultyFeature
 
             public void Execute()
             {
+                CoroutineRunner.instance.StartCoroutine(ExecuteCoroutine());
+            }
+
+            private IEnumerator ExecuteCoroutine()
+            {
                 var player = PlayerController.instance;
-                if (player == null) return;
+                if (player == null) yield break;
 
                 List<string> TimeSlowEvent = new List<string>
-                {
-                    "Have to slow down for a minute.",
-                    "Slow-mo vibes, but the berserk enemies didn’t get the memo."
-                };
-                GenerateText.SemiBotTalk(GenerateText.GenerateAffectionateSentence(TimeSlowEvent));
+            {
+                "Have to slow down for a minute.",
+                "Slow-mo vibes, but the berserk enemies didn’t get the memo."
+            };
+
+                bool isSemiBotTalkComplete = false;
+                GenerateText.SemiBotTalk(GenerateText.GenerateAffectionateSentence(TimeSlowEvent), 0.3f, () => isSemiBotTalkComplete = true);
+                yield return new WaitUntil(() => isSemiBotTalkComplete);
 
                 PhotonView view = player.GetComponent<PhotonView>();
 
@@ -1342,12 +1381,10 @@ namespace DifficultyFeature
                     var player = PlayerController.instance;
                     if (player == null) return;
 
-
-                    player.OverrideSpeed(1f);                // Vitesse normale
-                    player.OverrideLookSpeed(1f, 1f, 1f);     // Rotation standard
-                    player.OverrideAnimationSpeed(1f, 1f, 1f); // Animations
+                    player.OverrideSpeed(1f);
+                    player.OverrideLookSpeed(1f, 1f, 1f);
+                    player.OverrideAnimationSpeed(1f, 1f, 1f);
                     player.OverrideTimeScale(1f);
-                    // Temps normal
                 }
 
                 private IEnumerator RemoveEffectAfterTime()
@@ -1358,8 +1395,7 @@ namespace DifficultyFeature
                     Destroy(this);
                 }
             }
-
-        } //Finis (Ajout peut-être bien)
+        }
 
         public class RandomTeleportEvent : ISlotEvent
         {
@@ -1369,71 +1405,80 @@ namespace DifficultyFeature
 
             public void Execute()
             {
+                CoroutineRunner.instance.StartCoroutine(ExecuteCoroutine());
+            }
+
+            private IEnumerator ExecuteCoroutine()
+            {
                 var player = PlayerController.instance;
                 if (player == null)
                 {
                     Debug.LogError("[RandomTP] Joueur introuvable !");
-                    return;
+                    yield break;
                 }
 
-                // Liste des modules existants
                 var modules = GameObject.FindObjectsOfType<Module>();
                 if (modules.Length == 0)
                 {
                     Debug.LogError("[RandomTP] Aucun module trouvé !");
-                    return;
+                    yield break;
                 }
 
                 List<string> RandomTP = new List<string>
-                {
-                    "Reality bends, teleporting to a random destination.",
-                    "The fabric of the game shifts, placing you somewhere new.",
-                    "A mysterious force relocates you to an unpredictable spot."
-                };
-                GenerateText.SemiBotTalk(GenerateText.GenerateAffectionateSentence(RandomTP));
+            {
+                "Reality bends, teleporting to a random destination.",
+                "The fabric of the game shifts, placing you somewhere new.",
+                "A mysterious force relocates you to an unpredictable spot."
+            };
 
-                // On prend une salle aléatoire
+                bool isSemiBotTalkComplete = false;
+                GenerateText.SemiBotTalk(GenerateText.GenerateAffectionateSentence(RandomTP), 0.3f, () => isSemiBotTalkComplete = true);
+                yield return new WaitUntil(() => isSemiBotTalkComplete);
+
                 var randomModule = modules[UnityEngine.Random.Range(0, modules.Length)];
-
-                // On essaie de trouver un point de positionnement safe dans la salle
                 var targetPosition = randomModule.transform.position + UnityEngine.Vector3.up * 1.5f;
 
-                // Appliquer le TP
                 player.transform.position = targetPosition;
                 Debug.Log($"[RandomTP] Joueur téléporté dans {randomModule.name}");
             }
-        } //Finis (Manque vérification tp dans un trou) //Bug Ne tp plus
+        }
 
         public class GoldenGunEvent : ISlotEvent
         {
             public string EventName => "EnemyRain";
             public string IconName => "icon_enemy_rain";
-
             public string Asset => "TestAsset";
 
             public void Execute()
             {
+                CoroutineRunner.instance.StartCoroutine(ExecuteCoroutine());
+            }
+
+            private IEnumerator ExecuteCoroutine()
+            {
                 var player = PlayerController.instance;
-                if (player == null) return;
-                object[] instantiationData = new object[] { true }; // true = GoldenGun
+                if (player == null) yield break;
+
+                List<string> GoldenGun = new List<string>
+            {
+                "Golden Gun acquired! Time to shine… until the Taxman taxes it.",
+                "Shiny gun, zero skills. The Taxman’s laughing at my shots.",
+                "Got the Golden Gun! My confidence? Still in the shop."
+            };
+
+                bool isSemiBotTalkComplete = false;
+                GenerateText.SemiBotTalk(GenerateText.GenerateAffectionateSentence(GoldenGun), 0.3f, () => isSemiBotTalkComplete = true);
+                yield return new WaitUntil(() => isSemiBotTalkComplete);
+
+                object[] instantiationData = new object[] { true };
                 GameObject gunInstance2 = new GameObject();
                 try
                 {
-                    List<string> GoldenGun = new List<string>
-                    {
-                        "Golden Gun acquired! Time to shine… until the Taxman taxes it.",
-                        "Shiny gun, zero skills. The Taxman’s laughing at my shots.",
-                        "Got the Golden Gun! My confidence? Still in the shop."
-                    };
-
-                    GenerateText.SemiBotTalk(GenerateText.GenerateAffectionateSentence(GoldenGun));
-
                     gunInstance2 = PhotonNetwork.Instantiate("items/Golden_Gun", player.transform.position + player.transform.forward, UnityEngine.Quaternion.identity);
                 }
                 catch (Exception e)
                 {
                     Debug.LogException(e);
-
                 }
 
                 if (gunInstance2 == null)
@@ -1486,8 +1531,7 @@ namespace DifficultyFeature
                     GoldenGunLinker.GunQueue.Enqueue(__instance);
                 }
             }
-
-        } //Finis Marche Bien
+        }
 
         public class RevealMapEvent : ISlotEvent
         {
@@ -1497,21 +1541,28 @@ namespace DifficultyFeature
 
             public void Execute()
             {
+                CoroutineRunner.instance.StartCoroutine(ExecuteCoroutine());
+            }
+
+            private IEnumerator ExecuteCoroutine()
+            {
                 Debug.Log("[RevealMapEvent] Début du reveal");
+
+                List<string> RevealMap = new List<string>
+            {
+                "All terrain is exposed, the map’s boundaries now clear."
+            };
+
+                bool isSemiBotTalkComplete = false;
+                GenerateText.SemiBotTalk(GenerateText.GenerateAffectionateSentence(RevealMap), 0.3f, () => isSemiBotTalkComplete = true);
+                yield return new WaitUntil(() => isSemiBotTalkComplete);
 
                 int revealed = 0;
                 var volumes = GameObject.FindObjectsOfType<RoomVolume>();
                 Debug.Log($"[RevealMapEvent] {volumes.Length} RoomVolume trouvés.");
 
-                List<string> RevealMap = new List<string>
-                {
-                    "All terrain is exposed, the map’s boundaries now clear."
-                };
-                GenerateText.SemiBotTalk(GenerateText.GenerateAffectionateSentence(RevealMap));
-
                 foreach (var room in volumes)
                 {
-
                     room.SetExplored();
                 }
 
@@ -1522,36 +1573,42 @@ namespace DifficultyFeature
 
                 Debug.Log($"[RevealMapEvent] Carte révélée : {revealed} objets affichés.");
             }
-
-        } //Finis Marche Bien
+        }
 
         public class EnemyDuckEvent : ISlotEvent
         {
             public string EventName => "EnemyRain";
             public string IconName => "icon_enemy_rain";
-
             public string Asset => "TestAsset";
 
             public void Execute()
             {
+                CoroutineRunner.instance.StartCoroutine(ExecuteCoroutine());
+            }
+
+            private IEnumerator ExecuteCoroutine()
+            {
                 var player = PlayerController.instance;
-                if (player == null) return;
+                if (player == null) yield break;
 
                 string enemyName = "Duck";
 
                 if (!EnemyDirector.instance.TryGetEnemyThatContainsName(enemyName, out EnemySetup enemySetup))
                 {
                     Debug.Log("[EnemyRainEvent] Enemy not found: " + enemyName);
-                    return;
+                    yield break;
                 }
 
                 List<string> Duck = new List<string>
-                    {
-                        "Duck army incoming! My cart’s quacking for mercy.",
-                        "Feathers, quacks, and pain. This is my life now, thanks.",
-                        "Quackpocalypse unleashed! The shop’s out of duck repellent."
-                    };
-                GenerateText.SemiBotTalk(GenerateText.GenerateAffectionateSentence(Duck));
+            {
+                "Duck army incoming! My cart’s quacking for mercy.",
+                "Feathers, quacks, and pain. This is my life now, thanks.",
+                "Quackpocalypse unleashed! The shop’s out of duck repellent."
+            };
+
+                bool isSemiBotTalkComplete = false;
+                GenerateText.SemiBotTalk(GenerateText.GenerateAffectionateSentence(Duck), 0.3f, () => isSemiBotTalkComplete = true);
+                yield return new WaitUntil(() => isSemiBotTalkComplete);
 
                 int count = 15;
                 float radius = 10f;
@@ -1563,28 +1620,31 @@ namespace DifficultyFeature
                     UnityEngine.Vector3 offset = new UnityEngine.Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * radius;
                     UnityEngine.Vector3 spawnPos = center + offset;
 
-
                     spawnPos.y += 2f;
 
                     Debug.Log($"[EnemyRainEvent] Spawning enemy #{i + 1} at {spawnPos}");
                     Enemies.SpawnEnemy(enemySetup, spawnPos, UnityEngine.Quaternion.identity, spawnDespawned: false);
                 }
             }
-        } //Finis Marche Bien
+        }
 
         public class MarioStarEvent : MonoBehaviour, ISlotEvent
         {
             public string EventName => "MarioStar";
             public string IconName => "icon_enemy_rain";
-
             public string Asset => "TestAsset";
             public static AssetBundle AssetBundle { get; set; }
             public static AudioClip starClip { get; set; }
 
             public void Execute()
             {
+                CoroutineRunner.instance.StartCoroutine(ExecuteCoroutine());
+            }
+
+            private IEnumerator ExecuteCoroutine()
+            {
                 var player = PlayerController.instance;
-                if (player == null) return;
+                if (player == null) yield break;
 
                 string bundlePath = Path.Combine(Paths.PluginPath, "SK0R3N-DifficultyFeature", "assets", "Mario");
                 Debug.Log($"[AlarmEffectController] Loading asset bundle from: {bundlePath}");
@@ -1600,11 +1660,10 @@ namespace DifficultyFeature
                 if (starClip == null)
                 {
                     Debug.LogError("[AlarmEffectController] Failed to load Star.");
-                    return;
+                    yield break;
                 }
 
                 PlayerAvatar avatar = PlayerAvatar.instance;
-                // S'assurer que MarioStarEvent est attaché au joueur
                 var marioStarEvent = avatar.gameObject.GetComponent<MarioStarEvent>();
                 if (marioStarEvent == null)
                 {
@@ -1612,14 +1671,16 @@ namespace DifficultyFeature
                 }
 
                 List<string> Mario = new List<string>
-                {
-                    "The Mario Star surges through you, granting invincibility for 20 seconds.",
-                    "The star’s light shields you, granting 20 seconds of perfect safety.",
-                    "For 20 seconds, no enemy can touch me—pure invulnerability."
-                };
-                GenerateText.SemiBotTalk(GenerateText.GenerateAffectionateSentence(Mario));
+            {
+                "The Mario Star surges through you, granting invincibility for 20 seconds.",
+                "The star’s light shields you, granting 20 seconds of perfect safety.",
+                "For 20 seconds, no enemy can touch me—pure invulnerability."
+            };
 
-                // Lancer la coroutine sur le composant attaché
+                bool isSemiBotTalkComplete = false;
+                GenerateText.SemiBotTalk(GenerateText.GenerateAffectionateSentence(Mario), 0.3f, () => isSemiBotTalkComplete = true);
+                yield return new WaitUntil(() => isSemiBotTalkComplete);
+
                 avatar.StartCoroutine(marioStarEvent.ApplyMarioStarEffect(avatar, starClip));
             }
 
@@ -1627,8 +1688,6 @@ namespace DifficultyFeature
             {
                 float duration = clip.length;
                 Debug.Log($"[MarioStarEvent] Applying star power for {duration} seconds.");
-
-                // 1. HP invincible
 
                 PlayerController t = PlayerController.instance;
                 float originalMaxHealth = avatar.playerHealth.maxHealth;
@@ -1654,20 +1713,18 @@ namespace DifficultyFeature
                 GameObject overlay = GameObject.Instantiate(overlayPrefab);
                 HUDCanvas h = HUDCanvas.instance;
 
-                overlay.transform.SetParent(h.transform, false); // si tu veux le mettre dans HUD Canvas
+                overlay.transform.SetParent(h.transform, false);
                 overlay.SetActive(true);
                 Debug.Log("[MarioStarEvent] RainbowOverlay activé.");
 
                 Debug.Log("[MarioStarEvent] Overlay UI créé et affiché.");
 
-                // 2. Audio local (dans les oreilles du joueur)
                 AudioSource localAudio = avatar.gameObject.AddComponent<AudioSource>();
                 localAudio.clip = clip;
-                localAudio.spatialBlend = 0f; // son 2D dans les oreilles
+                localAudio.spatialBlend = 0f;
                 localAudio.loop = false;
                 localAudio.Play();
 
-                // 3. Audio global (réplication réseau)
                 if (PhotonNetwork.InRoom)
                 {
                     Debug.Log("Envoie Photon");
@@ -1677,13 +1734,11 @@ namespace DifficultyFeature
                     PhotonNetwork.RaiseEvent(2, eventData, raiseEventOptions, SendOptions.SendReliable);
                 }
 
-                // 4. Activer l'effet de "kill au contact"
                 var marioEffect = avatar.gameObject.AddComponent<MarioStarPower>();
                 marioEffect.duration = duration;
 
                 yield return new WaitForSeconds(duration);
 
-                // 5. Fin de l’effet
                 if (overlay != null)
                 {
                     overlay.SetActive(false);
@@ -1696,7 +1751,6 @@ namespace DifficultyFeature
                 UnityEngine.Object.Destroy(marioEffect);
                 Debug.Log("[MarioStarEvent] Star effect ended.");
 
-                // Détruire le composant MarioStarEvent
                 UnityEngine.Object.Destroy(this);
             }
 
@@ -1727,7 +1781,6 @@ namespace DifficultyFeature
                 {
                     Debug.Log("[MarioStarPower] Init...");
 
-                    // Ajoute un SphereCollider si aucun
                     triggerCollider = GetComponent<Collider>();
                     if (triggerCollider == null)
                     {
@@ -1748,7 +1801,6 @@ namespace DifficultyFeature
 
                     triggerCollider.isTrigger = true;
 
-                    // Vérifie/ajoute un Rigidbody (obligatoire pour que OnTriggerEnter fonctionne)
                     if (GetComponent<Rigidbody>() == null)
                     {
                         Debug.Log("[MarioStarPower] Aucun Rigidbody trouvé. Ajout d’un Rigidbody kinematic.");
@@ -1822,7 +1874,7 @@ namespace DifficultyFeature
                     Debug.Log("[RPC_PlayMarioStarSound] Configuration de l'AudioSource...");
                     AudioSource audio = position.gameObject.AddComponent<AudioSource>();
                     audio.clip = starClip;
-                    audio.spatialBlend = 1f; // 3D spatial
+                    audio.spatialBlend = 1f;
                     audio.maxDistance = 50f;
                     audio.Play();
 
@@ -1830,7 +1882,6 @@ namespace DifficultyFeature
                     Debug.Log($"[RPC_PlayMarioStarSound] Lecture de l'audio pendant {starClip.length} secondes.");
                     yield return new WaitForSeconds(starClip.length);
                     running = false;
-
 
                     eyeMatL?.SetFloat("_ColorOverlayAmount", 0f);
                     eyeMatR?.SetFloat("_ColorOverlayAmount", 0f);
@@ -1842,12 +1893,10 @@ namespace DifficultyFeature
                 {
                     while (current != null)
                     {
-                        // Si on tombe directement sur un Enemy, parfait
                         Enemy direct = current.GetComponent<Enemy>();
                         if (direct != null)
                             return direct;
 
-                        // Sinon on check s'il y a un EnemyParent, et on va chercher .Enemy
                         EnemyParent parent = current.GetComponent<EnemyParent>();
                         if (parent != null && parent.Enemy != null)
                         {
@@ -1863,7 +1912,6 @@ namespace DifficultyFeature
 
                 private void OnTriggerEnter(Collider other)
                 {
-
                     Enemy enemy = FindEnemyRoot(other.transform);
                     if (enemy != null)
                     {
@@ -1884,18 +1932,30 @@ namespace DifficultyFeature
                     }
                 }
             }
-
-        } //Finis 
+        }
 
         public class NoMinimap : ISlotEvent
         {
             public string EventName => "NoMinimap";
             public string IconName => "icon_enemy_rain";
-
             public string Asset => "TestAsset";
 
             public void Execute()
             {
+                CoroutineRunner.instance.StartCoroutine(ExecuteCoroutine());
+            }
+
+            private IEnumerator ExecuteCoroutine()
+            {
+                List<string> NoMinimap = new List<string>
+            {
+                "Minimap disabled. Guess I’ll follow the trail of my own tears."
+            };
+
+                bool isSemiBotTalkComplete = false;
+                GenerateText.SemiBotTalk(GenerateText.GenerateAffectionateSentence(NoMinimap), 0.3f, () => isSemiBotTalkComplete = true);
+                yield return new WaitUntil(() => isSemiBotTalkComplete);
+
                 MapLockController.LockForSeconds(60f);
             }
 
@@ -1919,13 +1979,6 @@ namespace DifficultyFeature
                         player.StopCoroutine(lockRoutine);
                     }
 
-                    List<string> NoMinimap = new List<string>
-                    {
-                        "Minimap disabled. Guess I’ll follow the trail of my own tears."
-                    };
-
-                    GenerateText.SemiBotTalk(GenerateText.GenerateAffectionateSentence(NoMinimap));
-
                     lockRoutine = player.StartCoroutine(LockRoutine(seconds));
                 }
 
@@ -1940,8 +1993,6 @@ namespace DifficultyFeature
                     {
                         if (player == null) yield break;
 
-                        // Force la map à rester fermée
-
                         InputManager.instance.Rebind(InputKey.Map, "<Keyboard>/pause");
                         seconds -= Time.deltaTime;
                         yield return null;
@@ -1951,131 +2002,7 @@ namespace DifficultyFeature
                     Debug.Log("[MapLockController] Map re-enabled.");
                 }
             }
-        } //Finis Marche Bien
-
-        /*public class VideoMapEvent : ISlotEvent
-        {
-            public string EventName => "VideoMap";
-            public string IconName => "icon_video";
-            public string Asset => "video";
-
-            public async void Execute()
-            {
-                PlayerAvatar map = PlayerAvatar.instance;
-
-                if (map == null)
-                {
-                    Debug.LogError("[VideoMapEvent] PlayerAvatar is null.");
-                    return;
-                }
-
-                Transform display = map.mapToolController.transform.Find("Controller/Visuals/Hide/Main Spring Target/Main Spring/Base Offset/Bob/Stick/stick/Main Unit/Display Spring Target/Display Spring/Counter/display_1x1");
-                foreach (Transform t in map.mapToolController.VisualTransform.GetComponentsInChildren<Transform>(true))
-                {
-                    Debug.LogError($"{t.name}");
-                    if (t.name == "display_1x1")
-                        display = t;
-                }
-
-                var meshRenderer = display.GetComponent<MeshRenderer>();
-                if (meshRenderer == null)
-                {
-                    Debug.LogError("[VideoMapEvent] MeshRenderer not found on display_1x1.");
-                    return;
-                }
-
-                System.Random rand = new System.Random();
-
-                AssetBundleRequest request = DifficultyFeature.request1;
-
-                int i = rand.Next(3);
-                Debug.LogError($"[VideoMapEvent] {i}");
-                switch (i)
-                {
-                    case 0:
-                        {
-                            request = DifficultyFeature.request1;
-                            break;
-                        }
-                    case 1:
-                        {
-                            request = DifficultyFeature.request2;
-                            break;
-                        }
-                    case 2:
-                        {
-                            request = DifficultyFeature.request1;
-                            break;
-                        }
-                    default:
-                        Debug.LogError($"[VideoMapEvent] {i}");
-                        break;
-                }
-
-
-                request.completed += (asyncOp) =>
-                {
-                    VideoClip videoClip = request.asset as VideoClip;
-                    if (videoClip == null)
-                    {
-                        Debug.LogError("[VideoMapEvent] Video clip not found in bundle.");
-                        return;
-                    }
-
-                    InitVideoPlayer(videoClip, display, map);
-                };
-
-            }
-
-            public async void InitVideoPlayer(VideoClip videoClip, Transform display, PlayerAvatar map)
-            {
-                RenderTexture renderTexture = new RenderTexture(256, 256, 0);
-                Debug.LogError("[VideoMapEvent] Where lag 1");
-                renderTexture.wrapMode = TextureWrapMode.Clamp;
-                renderTexture.filterMode = FilterMode.Point;
-                renderTexture.anisoLevel = 0;
-                renderTexture.useMipMap = false;
-                map.mapToolController.Active = true;
-
-                GameObject videoObject = new GameObject("MinimapVideoPlayer");
-                VideoPlayer player = videoObject.AddComponent<VideoPlayer>();
-
-                player.clip = videoClip;
-                player.isLooping = false;
-                player.playOnAwake = false;
-                player.renderMode = VideoRenderMode.RenderTexture;
-                player.targetTexture = renderTexture;
-                player.audioOutputMode = VideoAudioOutputMode.AudioSource;
-                player.SetDirectAudioVolume(0, 0f);
-
-
-                player.prepareCompleted += (_) =>
-                {
-                    Debug.Log("[VideoMapEvent] Video prepared, applying to minimap...");
-                    player.Play();
-                    map.StartCoroutine(UpdateAudioWithMapToggle(player, map));
-                    if (display != null && display.TryGetComponent(out MeshRenderer renderer))
-                    {
-                        renderer.material.mainTexture = renderTexture;
-                    }
-                };
-
-                Debug.Log("[VideoMapEvent] Video successfully applied to minimap screen.");
-            }
-            private float volume = 0f;
-
-            private IEnumerator UpdateAudioWithMapToggle(VideoPlayer audioSource, PlayerAvatar map)
-            {
-                while (audioSource != null && map != null)
-                {
-                    bool isMapOpen = map.mapToolController.Active;
-                    Debug.LogError($"[VideoMapEvent] {isMapOpen}");
-                    volume = isMapOpen ? 1f : volume - 0.1f;
-                    audioSource.SetDirectAudioVolume(0, volume);
-                    yield return new WaitForSeconds(0.1f); // vérifie toutes les 100 ms
-                }
-            }
-        } */ //Probablement a retirer
+        }
 
         public class AlarmEvent : ISlotEvent
         {
@@ -2083,16 +2010,20 @@ namespace DifficultyFeature
             public string IconName => "icon_enemy_rain";
             public string Asset => "TestAsset";
 
-            // Code d'événement personnalisé pour Photon
             private const byte ALARM_EVENT_CODE = 1;
 
             public void Execute()
+            {
+                CoroutineRunner.instance.StartCoroutine(ExecuteCoroutine());
+            }
+
+            private IEnumerator ExecuteCoroutine()
             {
                 PlayerAvatar playerAvatar = PlayerController.instance.playerAvatarScript;
                 if (playerAvatar == null)
                 {
                     Debug.LogWarning("[AlarmEvent] PlayerAvatar is null.");
-                    return;
+                    yield break;
                 }
 
                 Debug.Log("[AlarmEvent] Triggering alarm via RaiseEvent.");
@@ -2101,28 +2032,28 @@ namespace DifficultyFeature
                 if (photonView == null)
                 {
                     Debug.LogError("[AlarmEvent] No PhotonView on PlayerAvatar.");
-                    return;
+                    yield break;
                 }
+
                 List<string> Alarm = new List<string>
-                {
-                    "ERROR, MY SYSTEM IS BROKEN.",
-                    "I don’t have error, but I need some attention, ALARM ON.",
-                    "Time to break your ear, watch out."
-                };
-                GenerateText.SemiBotTalk(GenerateText.GenerateAffectionateSentence(Alarm));
+            {
+                "ERROR, MY SYSTEM IS BROKEN.",
+                "I don’t have error, but I need some attention, ALARM ON.",
+                "Time to break your ear, watch out."
+            };
 
-                // Préparer les données de l'événement
-                object[] eventData = new object[] { photonView.ViewID, 15f }; // viewID et duration
+                bool isSemiBotTalkComplete = false;
+                GenerateText.SemiBotTalk(GenerateText.GenerateAffectionateSentence(Alarm), 0.3f, () => isSemiBotTalkComplete = true);
+                yield return new WaitUntil(() => isSemiBotTalkComplete);
 
-                // Envoyer l'événement à tous les joueurs
+                object[] eventData = new object[] { photonView.ViewID, 15f };
                 RaiseEventOptions raiseEventOptions = new RaiseEventOptions { Receivers = ReceiverGroup.All };
                 PhotonNetwork.RaiseEvent(ALARM_EVENT_CODE, eventData, raiseEventOptions, SendOptions.SendReliable);
                 AlarmEffectController.Trigger(playerAvatar, 15f);
 
-                Debug.Log($"[AlarmEvent] RaiseEvent sent with ViewID: {photonView.ViewID}, Duration: 5f");
+                Debug.Log($"[AlarmEvent] RaiseEvent sent with ViewID: {photonView.ViewID}, Duration: 15f");
             }
 
-            // Le reste de la classe AlarmEffectController reste inchangé pour l'instant
             public class AlarmEffectController : MonoBehaviour
             {
                 public float duration = 3f;
@@ -2269,10 +2200,134 @@ namespace DifficultyFeature
                     Destroy(this);
                 }
             }
-        }//Fonctionne Bien
+        }
+    }
+}
+
+
+/*public class VideoMapEvent : ISlotEvent
+{
+    public string EventName => "VideoMap";
+    public string IconName => "icon_video";
+    public string Asset => "video";
+
+    public async void Execute()
+    {
+        PlayerAvatar map = PlayerAvatar.instance;
+
+        if (map == null)
+        {
+            Debug.LogError("[VideoMapEvent] PlayerAvatar is null.");
+            return;
+        }
+
+        Transform display = map.mapToolController.transform.Find("Controller/Visuals/Hide/Main Spring Target/Main Spring/Base Offset/Bob/Stick/stick/Main Unit/Display Spring Target/Display Spring/Counter/display_1x1");
+        foreach (Transform t in map.mapToolController.VisualTransform.GetComponentsInChildren<Transform>(true))
+        {
+            Debug.LogError($"{t.name}");
+            if (t.name == "display_1x1")
+                display = t;
+        }
+
+        var meshRenderer = display.GetComponent<MeshRenderer>();
+        if (meshRenderer == null)
+        {
+            Debug.LogError("[VideoMapEvent] MeshRenderer not found on display_1x1.");
+            return;
+        }
+
+        System.Random rand = new System.Random();
+
+        AssetBundleRequest request = DifficultyFeature.request1;
+
+        int i = rand.Next(3);
+        Debug.LogError($"[VideoMapEvent] {i}");
+        switch (i)
+        {
+            case 0:
+                {
+                    request = DifficultyFeature.request1;
+                    break;
+                }
+            case 1:
+                {
+                    request = DifficultyFeature.request2;
+                    break;
+                }
+            case 2:
+                {
+                    request = DifficultyFeature.request1;
+                    break;
+                }
+            default:
+                Debug.LogError($"[VideoMapEvent] {i}");
+                break;
+        }
+
+
+        request.completed += (asyncOp) =>
+        {
+            VideoClip videoClip = request.asset as VideoClip;
+            if (videoClip == null)
+            {
+                Debug.LogError("[VideoMapEvent] Video clip not found in bundle.");
+                return;
+            }
+
+            InitVideoPlayer(videoClip, display, map);
+        };
+
     }
 
-}
+    public async void InitVideoPlayer(VideoClip videoClip, Transform display, PlayerAvatar map)
+    {
+        RenderTexture renderTexture = new RenderTexture(256, 256, 0);
+        Debug.LogError("[VideoMapEvent] Where lag 1");
+        renderTexture.wrapMode = TextureWrapMode.Clamp;
+        renderTexture.filterMode = FilterMode.Point;
+        renderTexture.anisoLevel = 0;
+        renderTexture.useMipMap = false;
+        map.mapToolController.Active = true;
+
+        GameObject videoObject = new GameObject("MinimapVideoPlayer");
+        VideoPlayer player = videoObject.AddComponent<VideoPlayer>();
+
+        player.clip = videoClip;
+        player.isLooping = false;
+        player.playOnAwake = false;
+        player.renderMode = VideoRenderMode.RenderTexture;
+        player.targetTexture = renderTexture;
+        player.audioOutputMode = VideoAudioOutputMode.AudioSource;
+        player.SetDirectAudioVolume(0, 0f);
+
+
+        player.prepareCompleted += (_) =>
+        {
+            Debug.Log("[VideoMapEvent] Video prepared, applying to minimap...");
+            player.Play();
+            map.StartCoroutine(UpdateAudioWithMapToggle(player, map));
+            if (display != null && display.TryGetComponent(out MeshRenderer renderer))
+            {
+                renderer.material.mainTexture = renderTexture;
+            }
+        };
+
+        Debug.Log("[VideoMapEvent] Video successfully applied to minimap screen.");
+    }
+    private float volume = 0f;
+
+    private IEnumerator UpdateAudioWithMapToggle(VideoPlayer audioSource, PlayerAvatar map)
+    {
+        while (audioSource != null && map != null)
+        {
+            bool isMapOpen = map.mapToolController.Active;
+            Debug.LogError($"[VideoMapEvent] {isMapOpen}");
+            volume = isMapOpen ? 1f : volume - 0.1f;
+            audioSource.SetDirectAudioVolume(0, volume);
+            yield return new WaitForSeconds(0.1f); // vérifie toutes les 100 ms
+        }
+    }
+} */ //Probablement a retirer
 
 
 

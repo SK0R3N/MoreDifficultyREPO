@@ -1,4 +1,5 @@
 ﻿using DifficultyFeature;
+using DifficultyFeature.SlotsChaos;
 using HarmonyLib;
 using System.Collections;
 using System.Collections.Generic;

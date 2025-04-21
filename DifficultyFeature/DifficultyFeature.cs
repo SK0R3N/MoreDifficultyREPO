@@ -1,8 +1,10 @@
 using BepInEx;
 using BepInEx.Logging;
+using DifficultyFeature.DifficultyUpdate;
+using DifficultyFeature.SlotsChaos;
 using ExitGames.Client.Photon;
 using HarmonyLib;
-using MyMOD;
+using MenuLib;
 using Photon.Pun;
 using Photon.Realtime;
 using REPOLib.Modules;
@@ -15,6 +17,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.InputSystem;
+using UnityEngine.UIElements;
 using UnityEngine.Video;
 using static DifficultyFeature.Event;
 
@@ -34,6 +38,8 @@ namespace DifficultyFeature
         private HashSet<string> seenObjects = new();
         private bool subscribed = false;
         private const byte EVENT_CHECK_WALKIE_WINNER = 6;
+        private bool voteUI = true;
+        public DateTime startVote;
 
 
         public static int DifficultyLevel { get; set; } = 1;
@@ -53,8 +59,8 @@ namespace DifficultyFeature
             Instance = this;
 
             // Prevent the plugin from being deleted
-            this.gameObject.transform.parent = null;
-            this.gameObject.hideFlags = HideFlags.HideAndDontSave;
+            gameObject.transform.parent = null;
+            gameObject.hideFlags = HideFlags.HideAndDontSave;
             SlotAssetLoader.LoadSlotAsset();
 
             //SlotEventManager.RegisterEvent(new GoldenGunEvent());
@@ -63,7 +69,7 @@ namespace DifficultyFeature
             //SlotEventManager.RegisterEvent(new TimeSlowEvent());
             //SlotEventManager.RegisterEvent(new SurviveHorror());
             //SlotEventManager.RegisterEvent(new BetterWalkieTakkie());
-            SlotEventManager.RegisterEvent(new AlarmEvent());
+            //SlotEventManager.RegisterEvent(new AlarmEvent());
             //SlotEventManager.RegisterEvent(new MarioStarEvent());
             //SlotEventManager.RegisterEvent(new ExtractionPointHaulModifier());
             //SlotEventManager.RegisterEvent(new RevivePlayerEvent());
@@ -81,7 +87,7 @@ namespace DifficultyFeature
             GameObject goldenGunPrefab = bundle2.LoadAsset<GameObject>("Golden_Gun");
             Item item = bundle2.LoadAsset<Item>("Golden_Gun.asset");
 
-            REPOLib.Modules.Items.RegisterItem(item);
+            Items.RegisterItem(item);
 
             var harmony = new Harmony("SK0R3N.DifficultyFeature");
             harmony.PatchAll();
@@ -105,7 +111,19 @@ namespace DifficultyFeature
 
         private void Update()
         {
-            
+            if(PlayerAvatarDeathPatch.voteStart && startVote > startVote.AddMinutes(1))
+            {
+                if(VoteSlotsUI.vote.Count == 0)
+                {
+                    foreach (var item in GameDirector.instance.PlayerList)
+                    {
+                        VoteSlotsUI.vote.Add(item.playerName);
+                    }
+                }
+
+                VoteSlotsUI.ExecuteVote();
+            }
+
             GameObject lobbyPage = GameObject.Find("Menu Page Lobby(Clone)");
             if (lobbyPage != null && PhotonNetwork.IsMasterClient)
             {
@@ -119,22 +137,22 @@ namespace DifficultyFeature
 
             if (lobbyPage != null && PhotonNetwork.InRoom)
             {
-                var existingLabel = GameObject.FindObjectOfType<DifficultyLabelUI>();
+                var existingLabel = FindObjectOfType<DifficultyLabelUI>();
 
                 // Vérifie si l'objet existe encore mais n'est plus rattaché au HUD Canvas (ex: scene reload)
-                bool needsRecreate = existingLabel == null || existingLabel.label == null || existingLabel.label.transform.parent == null ;
+                bool needsRecreate = existingLabel == null || existingLabel.label == null || existingLabel.label.transform.parent == null;
 
                 if (needsRecreate)
                 {
                     if (existingLabel != null)
                     {
-                        GameObject.Destroy(existingLabel.gameObject); // Clean l'ancien label si besoin
+                        Destroy(existingLabel.gameObject); // Clean l'ancien label si besoin
                     }
 
                     var go = new GameObject("DifficultyLabelUI");
                     var view = go.AddComponent<PhotonView>();
                     go.AddComponent<DifficultyLabelUI>();
-                    GameObject.DontDestroyOnLoad(go);
+                    DontDestroyOnLoad(go);
                     Debug.Log("[DifficultyLabelUI] Nouveau label instancié.");
                 }
             }
@@ -147,13 +165,15 @@ namespace DifficultyFeature
 
             if (Input.GetKeyDown(KeyCode.F6))
             {
-                foreach (GameObject go in GameObject.FindObjectsOfType<GameObject>())
-                {
-                    if (go.activeInHierarchy)
-                    {
-                        Debug.Log($"[Debug] Active GameObject: {go.name} | Parent: {go.transform.GetComponentFastPath}");
-                    }
-                }
+                //foreach (GameObject go in FindObjectsOfType<GameObject>())
+                //{
+                //    if (go.activeInHierarchy)
+                //    {
+                //        Debug.Log($"[Debug] Active GameObject: {go.name} | Parent: {go.transform.GetComponentFastPath}");
+                //    }
+                //}
+
+                VoteSlotsUI.OpenVoteUi();
             }
 
 
@@ -253,38 +273,38 @@ namespace DifficultyFeature
                     break;
 
                 case 1:
-                        Debug.Log($"[AlarmEventHandler] Event received with code: {photonEvent.Code}");
+                    Debug.Log($"[AlarmEventHandler] Event received with code: {photonEvent.Code}");
 
-                        if (photonEvent.Code != 1) return;
+                    if (photonEvent.Code != 1) return;
 
-                        object[] data = (object[])photonEvent.CustomData;
-                        if (data == null || data.Length < 2)
-                        {
-                            Debug.LogError("[AlarmEventHandler] Invalid event data received.");
-                            return;
-                        }
+                    object[] data = (object[])photonEvent.CustomData;
+                    if (data == null || data.Length < 2)
+                    {
+                        Debug.LogError("[AlarmEventHandler] Invalid event data received.");
+                        return;
+                    }
 
-                        int viewId = (int)data[0];
-                        float duration = (float)data[1];
+                    int viewId = (int)data[0];
+                    float duration = (float)data[1];
 
-                        PhotonView photonView = PhotonView.Find(viewId);
-                        if (photonView == null)
-                        {
-                            Debug.LogError($"[AlarmEventHandler] ViewID {viewId} not found.");
-                            return;
-                        }
+                    PhotonView photonView = PhotonView.Find(viewId);
+                    if (photonView == null)
+                    {
+                        Debug.LogError($"[AlarmEventHandler] ViewID {viewId} not found.");
+                        return;
+                    }
 
-                        GameObject target = photonView.gameObject;
-                        PlayerAvatar avatar = target.GetComponent<PlayerAvatar>();
-                        if (avatar == null)
-                        {
-                            Debug.LogError("[AlarmEventHandler] No PlayerAvatar on target object.");
-                            return;
-                        }
+                    GameObject target = photonView.gameObject;
+                    PlayerAvatar avatar = target.GetComponent<PlayerAvatar>();
+                    if (avatar == null)
+                    {
+                        Debug.LogError("[AlarmEventHandler] No PlayerAvatar on target object.");
+                        return;
+                    }
 
-                        Debug.Log($"[AlarmEventHandler] Event processed for ViewID {viewId}, Duration: {duration}");
-                        AlarmEvent.AlarmEffectController.Trigger(avatar, duration);
-                        break;
+                    Debug.Log($"[AlarmEventHandler] Event processed for ViewID {viewId}, Duration: {duration}");
+                    AlarmEvent.AlarmEffectController.Trigger(avatar, duration);
+                    break;
                 case 2:
                     object[] data3 = (object[])photonEvent.CustomData;
 
@@ -385,6 +405,52 @@ namespace DifficultyFeature
                     }
 
                     break;
+                case 8:
+                    Debug.Log("Send Vote");
+                    object[] dataVote = (object[])photonEvent.customData;
+                    if (dataVote == null || dataVote.Length < 1)
+                    {
+                        Debug.Log($"[DifficultyFeature] DataVote failed.");
+                        return;
+                    }
+                    
+                    string Vote = (string)dataVote[0];
+                    PlayerAvatar avatarVote = PlayerAvatar.instance;
+                    if (avatarVote == null)
+                    {
+                        Debug.Log($"[DifficultyFeature] avatarVote failed.");
+                        return;
+                    }
+                    if (VoteSlotsUI.PlayerVote.Contains(avatarVote))
+                    {
+                        Debug.Log($"[DifficultyFeature] AlreadyVoted.");
+                        return;
+                    }
+
+                    VoteSlotsUI.PlayerVote.Add(avatarVote);
+                    VoteSlotsUI.vote.Add(Vote);
+                    if (VoteSlotsUI.PlayerVote.Count >= VoteSlotsUI.voteCountMax)
+                        VoteSlotsUI.ExecuteVote();
+
+                break;
+                case 9:
+                    object[] dataVoteExecute = (object[])photonEvent.customData;
+                    if (dataVoteExecute == null || dataVoteExecute.Length < 1)
+                    {
+                        return;
+                    }
+                    List<string> VoteExecute = (List<string>)dataVoteExecute[0];
+
+                    foreach (var vote in VoteExecute)
+                    {
+                        Debug.Log(vote);
+                        if (vote == PlayerAvatar.instance.playerName)
+                        {
+                            SlotAssetLoader.ShowSlotMachineUI();
+                        }
+                    }
+                break;
+
 
 
             }
@@ -410,7 +476,7 @@ namespace DifficultyFeature
             PlayerAvatar playerAvatar = PlayerAvatar.instance;
             if (playerAvatar == null) return;
 
-            string steamID = SemiFunc.PlayerGetSteamID(playerAvatar); 
+            string steamID = SemiFunc.PlayerGetSteamID(playerAvatar);
             if (string.IsNullOrEmpty(steamID))
             {
                 Debug.LogError("[DifficultyFeature] Impossible d'obtenir le SteamID du joueur.");
@@ -439,10 +505,9 @@ namespace DifficultyFeature
             }
         }
 
-
         private IEnumerator RegisterGoldenGunWhenReady(GameObject goldenGunPrefab)
         {
-            while (!(PhotonNetwork.PrefabPool.GetType().Name.Contains("CustomPrefabPool")))
+            while (!PhotonNetwork.PrefabPool.GetType().Name.Contains("CustomPrefabPool"))
             {
                 Debug.Log("[GoldenGun] Waiting for CustomPrefabPool...");
                 yield return null;

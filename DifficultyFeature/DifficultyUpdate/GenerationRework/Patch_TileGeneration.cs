@@ -1,4 +1,5 @@
 ﻿using BepInEx.Logging;
+using DifficultyFeature.DifficultyUpdate;
 using HarmonyLib;
 using REPOLib;
 using SingularityGroup.HotReload;
@@ -8,9 +9,9 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Text;
 using UnityEngine;
-using static MyMOD.DifficultyManager;
+using static DifficultyFeature.DifficultyUpdate.DifficultyManager;
 
-namespace MyMOD
+namespace DifficultyFeature.DifficultyUpdate.GenerationRework
 {
     [HarmonyPatch(typeof(LevelGenerator), "TileGeneration")]
     public static class Patch_TileGeneration
@@ -63,14 +64,14 @@ namespace MyMOD
                     yield break;
                 }
 
-                int moduleCount = DifficultyManager2.GetModifiedModuleAmount() + (RunManager.instance.levelsCompleted * 2);
+                int moduleCount = DifficultyManager2.GetModifiedModuleAmount() + RunManager.instance.levelsCompleted * 2;
                 if (moduleCount > 30)
                 {
                     moduleCount = 30;
                 }
                 Log.LogInfo($"[CustomTileGen] Using Module Count: {moduleCount}");
 
-                var difficulty = DifficultyManager.CurrentDifficulty;
+                var difficulty = CurrentDifficulty;
 
                 Log.LogInfo($"[Difficulty] DeadEndAmount → {gen.Level.PassageMaxAmount}");
                 Log.LogInfo($"[Difficulty] DeadEndAmount → {DifficultyManager2.GetPassageMultiplier(difficulty)}");
@@ -115,7 +116,7 @@ namespace MyMOD
                         RarityOverrideManager.Set(0.1f, 0.3f, 0.6f);
                         break;
                     case DifficultyLevel.Custom:
-                        RarityOverrideManager.Set((float)DifficultyManager.PourcentageRoom1 / 100, (float)DifficultyManager.PourcentageRoom2 / 100, (float)DifficultyManager.PourcentageRoom3 / 100);
+                        RarityOverrideManager.Set((float)PourcentageRoom1 / 100, (float)PourcentageRoom2 / 100, (float)PourcentageRoom3 / 100);
                         break;
                 }
 
@@ -170,7 +171,7 @@ namespace MyMOD
                     yield return null;
                 }
 
-                if(notworking)
+                if (notworking)
                 {
                     success = true;
                 }
@@ -243,7 +244,8 @@ namespace MyMOD
                     yield return null;
                 }
 
-                if (success) { 
+                if (success)
+                {
                     PrintMiniMap(grid);
                     gridField.SetValue(gen, grid);
                     waitingField.SetValue(gen, false);
@@ -416,30 +418,33 @@ namespace MyMOD
 
         public static int GetModifiedModuleAmount()
         {
-            Log.LogInfo($"[CustomTileGen] Difficulty: {DifficultyManager.CurrentDifficulty}");
-            switch (DifficultyManager.CurrentDifficulty)
+            Log.LogInfo($"[CustomTileGen] Difficulty: {CurrentDifficulty}");
+            switch (CurrentDifficulty)
             {
-                case DifficultyManager.DifficultyLevel.Hard: return 8;
-                case DifficultyManager.DifficultyLevel.Hardcore: return 10;
-                case DifficultyManager.DifficultyLevel.Nightmare: return 12;
-                case DifficultyManager.DifficultyLevel.IsThatEvenPossible: return 15;
-                case DifficultyManager.DifficultyLevel.Custom: return CustomRoom();
+                case DifficultyLevel.Hard: return 8;
+                case DifficultyLevel.Hardcore: return 10;
+                case DifficultyLevel.Nightmare: return 12;
+                case DifficultyLevel.IsThatEvenPossible: return 15;
+                case DifficultyLevel.Custom: return CustomRoom();
                 default: return 8;
             }
         }
 
         public static int CustomRoom()
         {
-            if(DifficultyManager.ExtractionMultiplier <= 12 && DifficultyManager.ExtractionMultiplier >= 7)
+            if (ExtractionMultiplier <= 12 && ExtractionMultiplier >= 7)
             {
-                return DifficultyManager.RoomNumber;
-            } else if (DifficultyManager.ExtractionMultiplier < 7 && DifficultyManager.ExtractionMultiplier >= 4)
+                return RoomNumber;
+            }
+            else if (ExtractionMultiplier < 7 && ExtractionMultiplier >= 4)
             {
                 return 20;
-            } else if (DifficultyManager.ExtractionMultiplier < 4 && DifficultyManager.ExtractionMultiplier >= 2)
+            }
+            else if (ExtractionMultiplier < 4 && ExtractionMultiplier >= 2)
             {
                 return 15;
-            } else
+            }
+            else
             {
                 return 10;
             }
@@ -456,7 +461,7 @@ namespace MyMOD
             DifficultyLevel.Hardcore => 2,
             DifficultyLevel.Nightmare => 3,
             DifficultyLevel.IsThatEvenPossible => 4,
-            DifficultyLevel.Custom => DifficultyManager.ExtractionMultiplier,
+            DifficultyLevel.Custom => ExtractionMultiplier,
             _ => 1
         };
 
@@ -467,7 +472,7 @@ namespace MyMOD
             DifficultyLevel.Hardcore => 7,
             DifficultyLevel.Nightmare => 9,
             DifficultyLevel.IsThatEvenPossible => 11,
-            DifficultyLevel.Custom => DifficultyManager.ExtractionMaxMultiplier,
+            DifficultyLevel.Custom => ExtractionMaxMultiplier,
             _ => 4
         };
     }

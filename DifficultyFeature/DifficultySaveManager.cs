@@ -1,7 +1,6 @@
 ﻿using BepInEx;
 using HarmonyLib;
 using Mono.Cecil.Cil;
-using MyMOD;
 using Newtonsoft.Json;
 using Photon.Pun;
 using Steamworks;
@@ -19,6 +18,7 @@ using static EnemyParent;
 using static System.Collections.Specialized.BitVector32;
 using static UnityEngine.ParticleSystem;
 using static UnityEngine.UIElements.UxmlAttributeDescription;
+using DifficultyFeature.DifficultyUpdate;
 
 namespace DifficultyFeature
 {

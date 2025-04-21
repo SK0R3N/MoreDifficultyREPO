@@ -1,4 +1,5 @@
 using BepInEx.Logging;
+using DifficultyFeature.DifficultyUpdate;
 using HarmonyLib;
 using REPOLib;
 using System;
@@ -7,9 +8,9 @@ using System.Net;
 using System.Reflection;
 using System.Text;
 using UnityEngine;
-using static MyMOD.DifficultyManager;
+using static DifficultyFeature.DifficultyUpdate.DifficultyManager;
 
-namespace MyMOD
+namespace DifficultyFeature.DifficultyUpdate.GenerationRework
 {
     [HarmonyPatch(typeof(ValuableDirector), "SetupHost")]
     public static class Patch_ValuableDirector_SetupHost
@@ -18,7 +19,7 @@ namespace MyMOD
 
         public static void Prefix(ValuableDirector __instance)
         {
-            var difficulty = DifficultyManager.CurrentDifficulty;
+            var difficulty = CurrentDifficulty;
             float multiplier = DifficultyManager3.GetValuableMultiplier(difficulty);
 
             Log.LogInfo($"[Valuables] Applying valuable multiplier x{multiplier} for difficulty {difficulty}");
@@ -57,7 +58,7 @@ namespace MyMOD
             List<EnemySetup> selectedEnemies = new List<EnemySetup>();
 
             int completed = RunManager.instance.levelsCompleted;
-            var difficulty = DifficultyManager.CurrentDifficulty;
+            var difficulty = CurrentDifficulty;
 
             int targetCount = GetTargetEnemyCount(completed, difficulty);
 
@@ -79,7 +80,7 @@ namespace MyMOD
 
             __instance.totalAmount = selectedEnemies.Count;
 
-            foreach(var enemy in selectedEnemies)
+            foreach (var enemy in selectedEnemies)
             {
                 try
                 {
@@ -96,16 +97,16 @@ namespace MyMOD
             return false; // skip vanilla
         }
 
-        private static int GetTargetEnemyCount(int completed, DifficultyManager.DifficultyLevel difficulty)
+        private static int GetTargetEnemyCount(int completed, DifficultyLevel difficulty)
         {
             int baseCount = 2 + completed; // exemple : +1 ennemi par niveau terminé
             switch (difficulty)
             {
-                case DifficultyManager.DifficultyLevel.Hard: return baseCount + 1;
-                case DifficultyManager.DifficultyLevel.Hardcore: return baseCount + 3;
-                case DifficultyManager.DifficultyLevel.Nightmare: return baseCount + 5;
-                case DifficultyManager.DifficultyLevel.IsThatEvenPossible: return baseCount + 8;
-                case DifficultyManager.DifficultyLevel.Custom: return baseCount * DifficultyManager.EnemyMultiplier;
+                case DifficultyLevel.Hard: return baseCount + 1;
+                case DifficultyLevel.Hardcore: return baseCount + 3;
+                case DifficultyLevel.Nightmare: return baseCount + 5;
+                case DifficultyLevel.IsThatEvenPossible: return baseCount + 8;
+                case DifficultyLevel.Custom: return baseCount * EnemyMultiplier;
                 default: return baseCount;
             }
         }
@@ -131,7 +132,7 @@ namespace MyMOD
                 {
                     if (enemy.rarityPreset.name.ToLower().Contains("rare") && random >= 20) continue;
                 }
-                catch (Exception e){}
+                catch (Exception e) { }
 
                 if (enemy.levelsCompletedCondition)
                 {
@@ -153,7 +154,7 @@ namespace MyMOD
 
         public static void Prefix(ShopManager __instance)
         {
-            float multiplier = DifficultyManager3.GetShopPriceMultiplier(DifficultyManager.CurrentDifficulty);
+            float multiplier = DifficultyManager3.GetShopPriceMultiplier(CurrentDifficulty);
             __instance.itemValueMultiplier = multiplier * 4;
             Log.LogError($"{__instance.itemValueMultiplier}");
 
@@ -168,7 +169,7 @@ namespace MyMOD
 
         public static void ApplyDifficultyScaling()
         {
-            var difficulty = DifficultyManager.CurrentDifficulty;
+            var difficulty = CurrentDifficulty;
 
             // Valuable multiplier
             float valuableMultiplier = DifficultyManager3.GetValuableMultiplier(difficulty);
@@ -178,26 +179,26 @@ namespace MyMOD
 
     public static class DifficultyManager3
     {
-        public static DifficultyManager.DifficultyLevel CurrentDifficulty = DifficultyManager.CurrentDifficulty;
+        public static DifficultyLevel CurrentDifficulty = DifficultyManager.CurrentDifficulty;
 
 
         public static float GetValuableMultiplier(DifficultyLevel difficulty) => difficulty switch
         {
-            DifficultyManager.DifficultyLevel.Hard => 2f,
-            DifficultyManager.DifficultyLevel.Hardcore => 3f,
-            DifficultyManager.DifficultyLevel.Nightmare => 4f,
-            DifficultyManager.DifficultyLevel.IsThatEvenPossible => 5f,
-            DifficultyManager.DifficultyLevel.Custom => DifficultyManager.ValuableMultiplier,
+            DifficultyLevel.Hard => 2f,
+            DifficultyLevel.Hardcore => 3f,
+            DifficultyLevel.Nightmare => 4f,
+            DifficultyLevel.IsThatEvenPossible => 5f,
+            DifficultyLevel.Custom => ValuableMultiplier,
             _ => 1f
         };
 
         public static float GetShopPriceMultiplier(DifficultyLevel difficulty) => difficulty switch
         {
-            DifficultyManager.DifficultyLevel.Hard => 1.5f,
-            DifficultyManager.DifficultyLevel.Hardcore => 2f,
-            DifficultyManager.DifficultyLevel.Nightmare => 2.5f,
-            DifficultyManager.DifficultyLevel.IsThatEvenPossible => 3f,
-            DifficultyManager.DifficultyLevel.Custom => DifficultyManager.ShopMultiplier,
+            DifficultyLevel.Hard => 1.5f,
+            DifficultyLevel.Hardcore => 2f,
+            DifficultyLevel.Nightmare => 2.5f,
+            DifficultyLevel.IsThatEvenPossible => 3f,
+            DifficultyLevel.Custom => ShopMultiplier,
             _ => 1f
         };
     }

@@ -16,7 +16,7 @@ using UnityEngine;
 using static b;
 using static UnityEngine.InputSystem.InputRemoting;
 
-namespace MyMOD
+namespace DifficultyFeature.DifficultyUpdate
 {
 
     public class DifficultyLabelUI : MonoBehaviour, IOnEventCallback, IInRoomCallbacks
@@ -67,11 +67,11 @@ namespace MyMOD
 
         public void OnEvent(EventData photonEvent)
         {
-                if (photonEvent.Code == DifficultyEventCode)
-                {
-                    string difficulty = (string)photonEvent.CustomData;
-                    SetLabel(difficulty);
-                }
+            if (photonEvent.Code == DifficultyEventCode)
+            {
+                string difficulty = (string)photonEvent.CustomData;
+                SetLabel(difficulty);
+            }
         }
 
         private void SetLabel(string difficulty)
@@ -114,7 +114,7 @@ namespace MyMOD
             Debug.Log("[DifficultyLabelUI] Début seconde");
             yield return new WaitForSeconds(5f);
             Debug.Log("[DifficultyLabelUI] Fin seconde");
-            DifficultyLabelUI.SendDifficultyToEveryone(DifficultyManager.CurrentDifficulty.ToString());
+            SendDifficultyToEveryone(DifficultyManager.CurrentDifficulty.ToString());
         }
 
         // Non utilisés ici, mais nécessaires pour IInRoomCallbacks
@@ -161,13 +161,13 @@ namespace MyMOD
                 var difficultySlider = MenuAPI.CreateREPOSlider(
                     text: "Difficulty",
                     description: "Select the game difficulty.",
-                    onOptionChanged: (string difficulty) =>
+                    onOptionChanged: (difficulty) =>
                     {
                         SelectedDifficulty = difficulty;
                         DifficultyManager.CurrentDifficulty = (DifficultyManager.DifficultyLevel)Enum.Parse(typeof(DifficultyManager.DifficultyLevel), SelectedDifficulty);
                         DifficultySaveManager.SaveDifficulty(SelectedDifficulty);
                         DifficultyLabelUI.SetDifficulty(SelectedDifficulty);
-                       
+
 
                         Debug.Log($"[MyMod] Difficulty selected: {SelectedDifficulty}");
 
@@ -204,7 +204,7 @@ namespace MyMOD
 
         private static void UpdateDifficultyRightPopup(string difficulty)
         {
-            if(popupRight != null || popupPageDifficulty != null)
+            if (popupRight != null || popupPageDifficulty != null)
             {
                 popupRight.ClosePage(closePagesAddedOnTop: false);
                 popupPageDifficulty.ClosePage(closePagesAddedOnTop: false);
@@ -365,7 +365,7 @@ namespace MyMOD
                             );
 
                     return scroll as RectTransform;
-                    });
+                });
 
 
             }

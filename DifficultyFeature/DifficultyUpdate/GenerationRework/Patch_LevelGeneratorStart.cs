@@ -1,9 +1,9 @@
 ﻿using HarmonyLib;
-using MyMOD;
-using static MyMOD.DifficultyManager;
+using static DifficultyFeature.DifficultyUpdate.DifficultyManager;
 using System.Reflection;
 using UnityEngine;
 using BepInEx.Logging;
+using DifficultyFeature.DifficultyUpdate;
 
 [HarmonyPatch(typeof(LevelGenerator), "Start")]
 public static class Patch_LevelGeneratorStart
