@@ -1,6 +1,9 @@
 ﻿using BepInEx.Logging;
 using DifficultyFeature.DifficultyUpdate;
+using ExitGames.Client.Photon;
 using HarmonyLib;
+using Photon.Pun;
+using Photon.Realtime;
 using REPOLib;
 using SingularityGroup.HotReload;
 using System;

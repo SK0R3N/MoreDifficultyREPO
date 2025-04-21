@@ -313,7 +313,7 @@ public class WalkieReceiver : MonoBehaviour
 {
     internal static WalkieReceiver instance;
     private AudioSource walkieAudioSource;
-    internal static float targetVolume = 0.05f;
+    internal static float targetVolume = 0f;
     internal static AssetBundle AssetBundle;
     internal static AudioClip walkieLoopClip;
     internal static bool walkieEnabled = false;
@@ -344,6 +344,7 @@ public class WalkieReceiver : MonoBehaviour
         }
         else
         {
+            walkieAudioSource.volume = 0;
             walkieAudioSource.Play();
             Debug.Log("[WalkieReceiver] Walkie loop started.");
         }

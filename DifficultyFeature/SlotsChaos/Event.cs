@@ -261,12 +261,10 @@ namespace DifficultyFeature
 
                 public static string RevertTinyEffectRPC(PlayerAvatar player)
                 {
-                    Debug.Log("I am dead 5");
                     if (player == null)
                     {
                         return null;
                     }
-                    Debug.Log("I am dead 6");
                     // Restaurer la taille
                     player.playerTransform.localScale = UnityEngine.Vector3.one;
                     if (player.playerAvatarVisuals != null)
@@ -355,62 +353,61 @@ namespace DifficultyFeature
                 [HarmonyPostfix]
                 public static void Postfix(PlayerAvatar __instance)
                 {
-                    if (!__instance.isLocal && !IsTinyPlayerActive)
-                    {
-                        return; // Ne s'applique qu'au joueur local pendant l'événement tiny
-                    }
+                    if (__instance.isLocal && IsTinyPlayerActive)
+                    { 
 
-                    if (__instance.isCrouching)
-                    {
-                        //Debug.Log("Je crouch");
-                        UnityEngine.Vector3 currentPos = __instance.transform.position;
-                        float minY = 0.2f;
-                        //Debug.Log("[Ce qu'on veut]" + minY);
-                        //Debug.Log("[Ce qu'il est]" + __instance.localCamera.transform.position.y);
-                        if (__instance.localCamera.transform.position.y < currentPos.y)
+                        if (__instance.isCrouching)
                         {
-                            //Debug.Log("cam trop basse");
-                            __instance.localCamera.transform.position = new UnityEngine.Vector3(currentPos.x, __instance.transform.position.y + 0.1f, currentPos.z);
-                            Debug.Log($"[TinyPlayerEventPatch] Caméra ajustée pour joueur accroupi tiny {__instance.playerName} : Y={minY}");
-                        }
-                    }
-                    else if (__instance.isDisabled)
-                    {
-                        IsTinyPlayerActive = false;
-
-                        Debug.Log("I am dead");
-                        if (SemiFunc.IsMultiplayer())
-                        {
-                            if (TinyPlayerManager.photonView != null && TinyPlayerManager.photonView.IsMine)
+                            //Debug.Log("Je crouch");
+                            UnityEngine.Vector3 currentPos = __instance.transform.position;
+                            float minY = 0.2f;
+                            //Debug.Log("[Ce qu'on veut]" + minY);
+                            //Debug.Log("[Ce qu'il est]" + __instance.localCamera.transform.position.y);
+                            if (__instance.localCamera.transform.position.y < currentPos.y)
                             {
-                                Debug.Log("I am dead 2");
-                                if (PhotonNetwork.InRoom)
+                                //Debug.Log("cam trop basse");
+                                __instance.localCamera.transform.position = new UnityEngine.Vector3(currentPos.x, __instance.transform.position.y + 0.1f, currentPos.z);
+                                Debug.Log($"[TinyPlayerEventPatch] Caméra ajustée pour joueur accroupi tiny {__instance.playerName} : Y={minY}");
+                            }
+                        }
+                        else if (__instance.isDisabled)
+                        {
+                            IsTinyPlayerActive = false;
+
+                            Debug.Log("I am dead");
+                            if (SemiFunc.IsMultiplayer())
+                            {
+                                if (TinyPlayerManager.photonView != null && TinyPlayerManager.photonView.IsMine)
                                 {
-                                    Debug.Log("I am dead 3");
-                                    PhotonView photonView = __instance.GetComponent<PhotonView>();
-                                    object[] eventData = new object[] { photonView.ViewID };
-                                    RaiseEventOptions raiseEventOptions = new RaiseEventOptions { Receivers = ReceiverGroup.All };
-                                    PhotonNetwork.RaiseEvent(4, eventData, raiseEventOptions, SendOptions.SendReliable);
+                                    Debug.Log("I am dead 2");
+                                    if (PhotonNetwork.InRoom)
+                                    {
+                                        Debug.Log("I am dead 3");
+                                        PhotonView photonView = __instance.GetComponent<PhotonView>();
+                                        object[] eventData = new object[] { photonView.ViewID };
+                                        RaiseEventOptions raiseEventOptions = new RaiseEventOptions { Receivers = ReceiverGroup.All };
+                                        PhotonNetwork.RaiseEvent(4, eventData, raiseEventOptions, SendOptions.SendReliable);
+                                    }
+                                }
+                                else
+                                {
+                                    TinyPlayerManager.RevertTinyEffectRPC(__instance);
                                 }
                             }
-                            else
+                            else if (__instance.isGrounded)
                             {
-                                TinyPlayerManager.RevertTinyEffectRPC(__instance);
+                                //Debug.Log("[cam] y :" + __instance.localCamera.transform.position.y);
+                                //Debug.Log("[position] y :" + (__instance.transform.position.y + 0.4));
+                                if (__instance.localCamera.transform.position.y > (__instance.transform.position.y + 0.4) || __instance.transform.position.y < 0.2)
+                                {
+                                    UnityEngine.Vector3 currentPos = __instance.transform.position;
+                                    //Debug.Log("cam trop basse");
+                                    __instance.localCamera.transform.position = new UnityEngine.Vector3(currentPos.x, __instance.transform.position.y + 0.2f, currentPos.z);
+                                }
                             }
-                        }
-                        else if (__instance.isGrounded)
-                        {
-                            //Debug.Log("[cam] y :" + __instance.localCamera.transform.position.y);
-                            //Debug.Log("[position] y :" + (__instance.transform.position.y + 0.4));
-                            if (__instance.localCamera.transform.position.y > (__instance.transform.position.y + 0.4) || __instance.transform.position.y < 0.2)
-                            {
-                                UnityEngine.Vector3 currentPos = __instance.transform.position;
-                                //Debug.Log("cam trop basse");
-                                __instance.localCamera.transform.position = new UnityEngine.Vector3(currentPos.x, __instance.transform.position.y + 0.2f, currentPos.z);
-                            }
-                        }
 
 
+                        }
                     }
                 }
             }

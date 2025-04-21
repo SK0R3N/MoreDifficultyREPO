@@ -1,6 +1,7 @@
 using BepInEx;
 using BepInEx.Logging;
 using DifficultyFeature.DifficultyUpdate;
+using DifficultyFeature.DifficultyUpdate.GenerationRework;
 using DifficultyFeature.SlotsChaos;
 using ExitGames.Client.Photon;
 using HarmonyLib;
@@ -43,6 +44,7 @@ namespace DifficultyFeature
         public DateTime startVote;
 
 
+
         public static int DifficultyLevel { get; set; } = 1;
 
         private void Start()
@@ -63,24 +65,18 @@ namespace DifficultyFeature
             gameObject.transform.parent = null;
             gameObject.hideFlags = HideFlags.HideAndDontSave;
             SlotAssetLoader.LoadSlotAsset();
-
-            //SlotEventManager.RegisterEvent(new GoldenGunEvent());
-            //SlotEventManager.RegisterEvent(new RevealMapEvent());
-            //SlotEventManager.RegisterEvent(new RandomTeleportEvent());
-            //SlotEventManager.RegisterEvent(new TimeSlowEvent());
-            //SlotEventManager.RegisterEvent(new SurviveHorror());
-            //SlotEventManager.RegisterEvent(new BetterWalkieTakkie());
-            //SlotEventManager.RegisterEvent(new AlarmEvent());
-            //SlotEventManager.RegisterEvent(new MarioStarEvent());
-            //SlotEventManager.RegisterEvent(new ExtractionPointHaulModifier());
-            //SlotEventManager.RegisterEvent(new RevivePlayerEvent());
-            //SlotEventManager.RegisterEvent(new ExplosiveDeathEvent());
-            //SlotEventManager.RegisterEvent(new TinyPlayerEvent());
-            string bundlePath = Path.Combine(Paths.PluginPath, "SK0R3N-DifficultyFeature", "assets", "video");
-            AssetBundle bundle = AssetBundle.LoadFromFile(bundlePath);
-            request1 = bundle.LoadAssetAsync<VideoClip>("Clash");
-            request2 = bundle.LoadAssetAsync<VideoClip>("Undertale");
-            request3 = bundle.LoadAssetAsync<VideoClip>("minecraft");
+            SlotEventManager.RegisterEvent(new GoldenGunEvent());
+            SlotEventManager.RegisterEvent(new RevealMapEvent());
+            SlotEventManager.RegisterEvent(new RandomTeleportEvent());
+            SlotEventManager.RegisterEvent(new TimeSlowEvent());
+            SlotEventManager.RegisterEvent(new SurviveHorror());
+            SlotEventManager.RegisterEvent(new BetterWalkieTakkie());
+            SlotEventManager.RegisterEvent(new AlarmEvent());
+            SlotEventManager.RegisterEvent(new MarioStarEvent());
+            SlotEventManager.RegisterEvent(new ExtractionPointHaulModifier());
+            SlotEventManager.RegisterEvent(new RevivePlayerEvent());
+            SlotEventManager.RegisterEvent(new ExplosiveDeathEvent());
+            SlotEventManager.RegisterEvent(new TinyPlayerEvent());
 
             string bundlePath2 = Path.Combine(Paths.PluginPath, "SK0R3N-DifficultyFeature", "assets", "goldengun");
             AssetBundle bundle2 = AssetBundle.LoadFromFile(bundlePath2);
@@ -111,7 +107,7 @@ namespace DifficultyFeature
 
         private void Update()
         {
-            if(PlayerAvatarDeathPatch.voteStart && startVote > startVote.AddMinutes(1))
+            if (PlayerAvatarDeathPatch.voteStart && startVote > startVote.AddMinutes(1))
             {
                 if(VoteSlotsUI.vote.Count == 0)
                 {
@@ -157,10 +153,9 @@ namespace DifficultyFeature
                 }
             }
 
-
             if (Input.GetKeyDown(KeyCode.F5))
             {
-                ListHUDObjects();
+                //ListHUDObjects();
             }
 
             if (Input.GetKeyDown(KeyCode.F6))
@@ -172,10 +167,7 @@ namespace DifficultyFeature
                 //        Debug.Log($"[Debug] Active GameObject: {go.name} | Parent: {go.transform.GetComponentFastPath}");
                 //    }
                 //}
-
-                VoteSlotsUI.OpenVoteUi();
             }
-
 
             PlayerAvatar playerAvatar = PlayerAvatar.instance;
             if (playerAvatar.mapToolController.Active && Input.GetKeyDown(KeyCode.RightArrow))
@@ -201,12 +193,24 @@ namespace DifficultyFeature
                 }
             }
 
-            if (Input.GetKeyDown(KeyCode.F7))
-            {
-                SlotAssetLoader.ShowSlotMachineUI();
-            }
+            //if (Input.GetKeyDown(KeyCode.F7))
+            //{
+            //    //SlotAssetLoader.ShowSlotMachineUI();
+            //    SlotsChaos.ProgressBar.LoadProgressAsset();
+            //}
         }
 
+        private static void WaitForLevelGenerator()
+        {
+            Debug.LogError("WaitForLevelGenerator");
+            while (LevelGenerator.Instance == null)
+            {
+                Debug.LogError("LevelGen Non trouver");
+                return;
+            }
+            GameObject managerObject = new GameObject("TileActivationManager");
+            managerObject.AddComponent<TileActivationManager>();
+        }
 
         //Plugin Methode
         public void OnEvent(EventData photonEvent)
@@ -229,7 +233,6 @@ namespace DifficultyFeature
                         }
                     }
                     break;
-
                 case 104: // Sync état ON/OFF
                     if (photonEvent.CustomData is object[] data2 && data2.Length == 2)
                     {
@@ -271,7 +274,6 @@ namespace DifficultyFeature
                         }
                     }
                     break;
-
                 case 1:
                     Debug.Log($"[AlarmEventHandler] Event received with code: {photonEvent.Code}");
 
@@ -433,26 +435,48 @@ namespace DifficultyFeature
                     break;
                 case 9:
                     object[] dataVoteExecute = (object[])photonEvent.CustomData;
-                    Debug.Log("nop");
                     if (dataVoteExecute == null || dataVoteExecute.Length < 1)
                     {
                         return;
                     }
-                    Debug.Log("nop");
                     string[] VoteExecute = (string[])dataVoteExecute[0];
-                    Debug.Log("nop");
                     winner(VoteExecute);
                 break;
+                case 10:
+                    object[] dataPoints = (object[])photonEvent.CustomData;
+                    int points = (int)dataPoints[0];
+                    Debug.Log($"[ProgressBar] Event Raised progress increment event with {points} points.");
+                    CoroutineRunner.instance.StartCoroutine(SlotsChaos.ProgressBar.UpdateProgress((int)SlotsChaos.ProgressBar.progress + points));
 
-
-
-
+                    object[] contentPoints = new object[] { SlotsChaos.ProgressBar.progress };
+                    RaiseEventOptions raiseEventOptions = new RaiseEventOptions { Receivers = ReceiverGroup.All };
+                    PhotonNetwork.RaiseEvent(11, contentPoints, raiseEventOptions, SendOptions.SendReliable);
+                    break;
+                case 11:
+                    if(!PhotonNetwork.IsMasterClient)
+                    {
+                        object[] dataPointsUpdate = (object[])photonEvent.CustomData;
+                        int pointsUpdate = (int)dataPointsUpdate[0];
+                        SlotsChaos.ProgressBar.UpdateProgress(pointsUpdate);
+                    }
+                    break;
             }
         }
 
+        [HarmonyPatch(typeof(LevelGenerator))]
+        internal static class PunManagerPatch
+        {
+            [HarmonyPostfix]
+            [HarmonyPatch("GenerateDone")]
+            private static void Start_Postfix(PunManager __instance)
+            {
+                //WaitForLevelGenerator();
+                SlotsChaos.ProgressBar.LoadProgressAsset();;
+            }
+        } 
+
         private void winner(string[] vote)
         {
-            Debug.Log("nop");
             CoroutineRunner.instance.StartCoroutine(WinnerVote(vote));
         }
 
