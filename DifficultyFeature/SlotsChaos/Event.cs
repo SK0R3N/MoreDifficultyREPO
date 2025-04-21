@@ -2038,7 +2038,6 @@ namespace DifficultyFeature
                 List<string> Alarm = new List<string>
             {
                 "ERROR, MY SYSTEM IS BROKEN.",
-                "I don’t have error, but I need some attention, ALARM ON.",
                 "Time to break your ear, watch out."
             };
 

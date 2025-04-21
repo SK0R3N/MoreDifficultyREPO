@@ -22,8 +22,8 @@ namespace DifficultyFeature.SlotsChaos
     public static class VoteSlotsUI
     {
         internal static REPOLabel label;
-        internal static List<string> vote;
-        internal static List<PlayerAvatar> PlayerVote;
+        internal static List<string> vote = new List<string>();
+        internal static List<PlayerAvatar> PlayerVote = new List<PlayerAvatar>();
         internal static int voteCountMax;
         internal static REPOPopupPage votePage;
 
@@ -116,8 +116,12 @@ namespace DifficultyFeature.SlotsChaos
             votePage.ClosePage(true);
             PlayerAvatar playerAvatar = PlayerAvatar.instance;
 
-            object[] eventData = new object[] { playerName };
-            RaiseEventOptions raiseEventOptions = new RaiseEventOptions { Receivers = ReceiverGroup.MasterClient };
+            PhotonView photonView = playerAvatar.GetComponent<PhotonView>();
+            Debug.Log(photonView.ViewID);
+            Debug.Log(playerAvatar);
+
+            object[] eventData = new object[] { photonView.ViewID , playerName };
+            RaiseEventOptions raiseEventOptions = new RaiseEventOptions { Receivers = ReceiverGroup.All };
             PhotonNetwork.RaiseEvent(8, eventData, raiseEventOptions, SendOptions.SendReliable);
 
         }
@@ -125,12 +129,14 @@ namespace DifficultyFeature.SlotsChaos
         internal static void ExecuteVote()
         {
             PhotonView photonView = PlayerAvatar.instance.GetComponent<PhotonView>();
-            vote.Clear();
-            PlayerVote.Clear();
+
             Debug.Log("Execute vote");
-            object[] eventData = new object[] { GetWinners(vote) };
+            object[] eventData = new object[] { GetWinners(vote).ToArray() };
             RaiseEventOptions raiseEventOptions = new RaiseEventOptions { Receivers = ReceiverGroup.All };
             PhotonNetwork.RaiseEvent(9, eventData, raiseEventOptions, SendOptions.SendReliable);
+
+            vote.Clear();
+            PlayerVote.Clear();
         }
 
         public static List<string> GetWinners(List<string> vote)
@@ -166,6 +172,8 @@ namespace DifficultyFeature.SlotsChaos
                     winners.Add(pair.Key);
                 }
             }
+
+            Debug.Log("[Vote] " + winners.Count);
 
             return winners;
         }
@@ -207,26 +215,24 @@ namespace DifficultyFeature.SlotsChaos
         private static IEnumerator WaitForSecondes(float seconde)
         {
             yield return new WaitForSeconds(seconde);
-
-            Debug.Log("InGame");
+;
             int nbr = 0;
             foreach (var player in GameDirector.instance.PlayerList)
             {
                 if (player.isDisabled)
                 {
-                    Debug.Log("PlayerDead");
                     nbr++;
                 }
             }
 
             if (nbr >= GameDirector.instance.PlayerList.Count / 2 && nbr != GameDirector.instance.PlayerList.Count)
             {
-                Debug.Log("Launche UI");
                 VoteSlotsUI.voteCountMax = nbr;
                 voteUI = false;
                 if (PlayerAvatar.instance.isDisabled)
+                {
                     VoteSlotsUI.OpenVoteUi();
-
+                }
                 if (PhotonNetwork.IsMasterClient)
                 {
 

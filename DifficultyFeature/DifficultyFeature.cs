@@ -16,6 +16,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UIElements;
@@ -25,7 +26,7 @@ using static DifficultyFeature.Event;
 namespace DifficultyFeature
 {
     [BepInPlugin("SK0R3N.DifficultyFeature", "DifficultyFeature", "1.0")]
-    public class DifficultyFeature : BaseUnityPlugin
+    public class DifficultyFeature : BaseUnityPlugin 
     {
         internal static DifficultyFeature Instance { get; private set; } = null!;
         internal new static ManualLogSource Logger => Instance._logger;
@@ -96,7 +97,6 @@ namespace DifficultyFeature
 
             Logger.LogInfo($"{Info.Metadata.GUID} v{Info.Metadata.Version} has loaded!");
         }
-
 
         internal void Patch()
         {
@@ -406,53 +406,98 @@ namespace DifficultyFeature
 
                     break;
                 case 8:
-                    Debug.Log("Send Vote");
-                    object[] dataVote = (object[])photonEvent.customData;
-                    if (dataVote == null || dataVote.Length < 1)
-                    {
-                        Debug.Log($"[DifficultyFeature] DataVote failed.");
-                        return;
-                    }
-                    
-                    string Vote = (string)dataVote[0];
-                    PlayerAvatar avatarVote = PlayerAvatar.instance;
-                    if (avatarVote == null)
-                    {
-                        Debug.Log($"[DifficultyFeature] avatarVote failed.");
-                        return;
-                    }
-                    if (VoteSlotsUI.PlayerVote.Contains(avatarVote))
-                    {
-                        Debug.Log($"[DifficultyFeature] AlreadyVoted.");
-                        return;
-                    }
+                    Debug.Log(photonEvent.CustomData);
 
-                    VoteSlotsUI.PlayerVote.Add(avatarVote);
-                    VoteSlotsUI.vote.Add(Vote);
-                    if (VoteSlotsUI.PlayerVote.Count >= VoteSlotsUI.voteCountMax)
-                        VoteSlotsUI.ExecuteVote();
+                    if (photonEvent.CustomData is object[] dataVote && dataVote.Length == 2)
+                    {
+                        int viewIDVote = (int)dataVote[0];
+                        string Vote = (string)dataVote[1];
 
-                break;
+                        PlayerAvatar avatarVote = PlayerAvatar.instance;
+                        if (avatarVote == null)
+                        {
+                            Debug.Log($"[DifficultyFeature] avatarVote failed.");
+                            return;
+                        }
+                        if (VoteSlotsUI.PlayerVote.Contains(avatarVote))
+                        {
+                            Debug.Log($"[DifficultyFeature] AlreadyVoted.");
+                            return;
+                        }
+
+                        VoteSlotsUI.PlayerVote.Add(avatarVote);
+                        VoteSlotsUI.vote.Add(Vote);
+                        if (VoteSlotsUI.PlayerVote.Count >= VoteSlotsUI.voteCountMax)
+                            VoteSlotsUI.ExecuteVote();
+                    }
+                    break;
                 case 9:
-                    object[] dataVoteExecute = (object[])photonEvent.customData;
+                    object[] dataVoteExecute = (object[])photonEvent.CustomData;
+                    Debug.Log("nop");
                     if (dataVoteExecute == null || dataVoteExecute.Length < 1)
                     {
                         return;
                     }
-                    List<string> VoteExecute = (List<string>)dataVoteExecute[0];
-
-                    foreach (var vote in VoteExecute)
-                    {
-                        Debug.Log(vote);
-                        if (vote == PlayerAvatar.instance.playerName)
-                        {
-                            SlotAssetLoader.ShowSlotMachineUI();
-                        }
-                    }
+                    Debug.Log("nop");
+                    string[] VoteExecute = (string[])dataVoteExecute[0];
+                    Debug.Log("nop");
+                    winner(VoteExecute);
                 break;
 
 
 
+
+            }
+        }
+
+        private void winner(string[] vote)
+        {
+            Debug.Log("nop");
+            CoroutineRunner.instance.StartCoroutine(WinnerVote(vote));
+        }
+
+        private IEnumerator WinnerVote(string[] vote)
+        {
+            Debug.Log(vote[0]);
+            List<string> Quote = new List<string>();
+
+            if (vote.Count() == 1)
+            {
+                Quote = new List<string>() { "Death has spoken. It's " + vote[0] + " who has won!", vote[0] + " has earned the chance to play the Slot of Chaos." };
+            }
+            else if (vote.Count() == 2)
+            {
+                Quote = new List<string>() { "Death has spoken. It's " + vote[0] + " and " + vote[1] + " who have won!", vote[0] + " and " + vote[1] + " have earned the chance to play the Slot of Chaos." };
+            }
+            else if (vote.Count() == 3)
+            {
+                Quote = new List<string>() { "Death has spoken. It's " + vote[0] + ", " + vote[1] + ", and " + vote[2] + " who have won!", vote[0] + ", " + vote[1] + ", and " + vote[2] + " have earned the chance to play the Slot of Chaos." };
+            }
+            else if (vote.Count() == 4)
+            {
+                Quote = new List<string>() { "Death has spoken. It's " + vote[0] + ", " + vote[1] + ", " + vote[2] + ", and " + vote[3] + " who have won!", vote[0] + ", " + vote[1] + ", " + vote[2] + ", and " + vote[3] + " have earned the chance to play the Slot of Chaos." };
+            }
+            else if (vote.Count() >= 5)
+            {
+                Quote = new List<string>() { "Death has spoken. It's " + vote[0] + ", " + vote[1] + ", " + vote[2] + ", " + vote[3] + ", and others who have won!", vote[0] + ", " + vote[1] + ", " + vote[2] + ", " + vote[3] + ", and others have earned the chance to play the Slot of Chaos." };
+            }
+            else
+            {
+                Quote = new List<string>() { "How is that even possible? No one has won the Slot of Chaos..." };
+            }
+
+            Debug.Log(Quote[0]);
+            bool isSemiBotTalkComplete = false;
+            GenerateText.SemiBotTalk(GenerateText.GenerateAffectionateSentence(Quote), 0.3f, () => isSemiBotTalkComplete = true);
+            yield return new WaitUntil(() => isSemiBotTalkComplete);
+
+            foreach (var vote2 in vote)
+            {
+                Debug.Log(vote2);
+                if (vote2 == PlayerAvatar.instance.playerName)
+                {
+                    SlotAssetLoader.ShowSlotMachineUI();
+                }
             }
         }
 
