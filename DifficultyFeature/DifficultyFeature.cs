@@ -12,12 +12,14 @@ using REPOLib.Modules;
 using REPOLib.Objects;
 using Steamworks;
 using Steamworks.Ugc;
+using SingularityGroup.HotReload;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Unity.VisualScripting;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UIElements;
@@ -33,15 +35,7 @@ namespace DifficultyFeature
         internal new static ManualLogSource Logger => Instance._logger;
         private ManualLogSource _logger => base.Logger;
         internal Harmony? Harmony { get; set; }
-        internal static AssetBundleRequest request1 { get; set; }
-        internal static AssetBundleRequest request2 { get; set; }
-        internal static AssetBundleRequest request3 { get; set; }
-        private static CustomPrefabPool _customPool;
-        private HashSet<string> seenObjects = new();
-        private bool subscribed = false;
-        private const byte EVENT_CHECK_WALKIE_WINNER = 6;
-        private bool voteUI = true;
-        public DateTime startVote;
+        private RoomCullingManager cullingManager;
 
 
 
@@ -105,8 +99,25 @@ namespace DifficultyFeature
             Harmony?.UnpatchSelf();
         }
 
+        private static readonly ManualLogSource Log = BepInEx.Logging.Logger.CreateLogSource("DifficultyFeature.ViewIDLogger");
+        private PhotonView[] lastPhotonViews = new PhotonView[0];
+
         private void Update()
         {
+
+            if (RunManager.instance.levelCurrent.name.ToLower().Contains("vaultline"))
+            {
+                PhotonView[] allViews = PhotonNetwork.PhotonViews;
+                foreach (PhotonView view in allViews)
+                {
+                    if (view.gameObject.name.ToLower().Contains("door") || view.gameObject.name.ToLower().Contains("hinge"))
+                    {
+                        PhotonNetwork.Destroy(view.gameObject);
+                        Debug.Log("PhotonDestroy");
+                    }
+                }
+            }
+
             if (PlayerAvatarDeathPatch.voteStart && startVote > startVote.AddMinutes(1))
             {
                 if(VoteSlotsUI.vote.Count == 0)
@@ -200,6 +211,11 @@ namespace DifficultyFeature
             //}
         }
 
+        public string GetComponentInfo(GameObject go)
+        {
+            if (go == null) return "None";
+            var components = go.GetComponents<MonoBehaviour>();
+            if (components.Length == 0) return "No MonoBehaviours";
         private static void WaitForLevelGenerator()
         {
             Debug.LogError("WaitForLevelGenerator");
@@ -210,6 +226,17 @@ namespace DifficultyFeature
             }
             GameObject managerObject = new GameObject("TileActivationManager");
             managerObject.AddComponent<TileActivationManager>();
+        }
+
+            System.Text.StringBuilder sb = new();
+            foreach (var comp in components)
+            {
+                if (comp != null && !(comp is PhotonView))
+                {
+                    sb.Append(comp.GetType().Name).Append(", ");
+                }
+            }
+            return sb.Length > 0 ? sb.ToString(0, sb.Length - 2) : "None";
         }
 
         //Plugin Methode
@@ -812,5 +839,53 @@ namespace DifficultyFeature
             }
             return path;
         }
+
+
+        // Trouver tous les PhotonView actifs
+        //var photonViews = FindObjectsOfType<PhotonView>();
+        //if (photonViews.Length != lastPhotonViews.Length)
+        //{
+        //    // Loguer les nouveaux ViewID
+        //    foreach (var view in photonViews)
+        //    {
+        //        if (view == null || view.ViewID == 0) continue;
+
+        //        bool isNew = !System.Array.Exists(lastPhotonViews, v => v != null && v.ViewID == view.ViewID);
+        //        if (isNew)
+        //        {
+        //            GameObject go = view.gameObject;
+        //            string objectName = go != null ? go.name : "Unknown";
+        //            string prefabName = view.name ?? "None";
+        //            string owner = view.Owner != null ? $"Player {view.Owner.ActorNumber} ({view.Owner.NickName})" : "Room (Scene)";
+        //            string componentInfo = GetComponentInfo(go);
+
+        //            Log.LogInfo($"[ViewIDLogger] Assigned ViewID: {view.ViewID} | Object: {objectName} | Prefab: {prefabName} | Owner: {owner} | Components: {componentInfo}");
+        //        }
+        //    }
+
+        //    // Mettre à jour la liste des ViewID connus
+        //    lastPhotonViews = photonViews;
+
+        //    // Loguer le nombre total d'objets réseau
+        //    Log.LogInfo($"[ViewIDMonitor] Current networked objects: {PhotonNetwork.ViewCount}");
+        //}
+
+        //    // Créer un GameObject pour RoomCullingManager
+        //    GameObject cullingManagerObject = new GameObject("RoomCullingManager");
+        //    DontDestroyOnLoad(cullingManagerObject); // Persister entre les scènes
+        //    RoomCullingManager cullingManager = cullingManagerObject.AddComponent<RoomCullingManager>();
+
+        //    // Trouver le joueur
+        //    GameObject player = GameObject.FindGameObjectWithTag("Player"); // À adapter selon R.E.P.O.
+
+        //    if (player == null)
+        //    {
+        //        Debug.LogError("[DifficultyFeaturePlugin] Failed to find Player.");
+        //        return;
+        //    }
+
+        //    // Initialiser RoomCullingManager
+        //    cullingManager.Initialize(player);
+        //}
     }
 }

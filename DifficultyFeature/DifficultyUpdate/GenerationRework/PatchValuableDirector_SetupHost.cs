@@ -102,11 +102,11 @@ namespace DifficultyFeature.DifficultyUpdate.GenerationRework
             int baseCount = 2 + completed; // exemple : +1 ennemi par niveau terminé
             switch (difficulty)
             {
-                case DifficultyLevel.Hard: return baseCount + 1;
-                case DifficultyLevel.Hardcore: return baseCount + 3;
-                case DifficultyLevel.Nightmare: return baseCount + 5;
-                case DifficultyLevel.IsThatEvenPossible: return baseCount + 8;
-                case DifficultyLevel.Custom: return baseCount * EnemyMultiplier;
+                case DifficultyManager.DifficultyLevel.Hard: return baseCount + 1;
+                case DifficultyManager.DifficultyLevel.Hardcore: return baseCount + 3;
+                case DifficultyManager.DifficultyLevel.Nightmare: return baseCount + 5;
+                case DifficultyManager.DifficultyLevel.IsThatEvenPossible: return baseCount + 8;
+                case DifficultyManager.DifficultyLevel.Custom: return DifficultyManager.EnemyMultiplier;
                 default: return baseCount;
             }
         }
