@@ -36,6 +36,11 @@ namespace DifficultyFeature
         private ManualLogSource _logger => base.Logger;
         internal Harmony? Harmony { get; set; }
         private RoomCullingManager cullingManager;
+        private bool subscribed = false;
+        private const byte EVENT_CHECK_WALKIE_WINNER = 6;
+        private bool voteUI = true;
+        public DateTime startVote;
+
 
 
 
@@ -59,17 +64,17 @@ namespace DifficultyFeature
             gameObject.transform.parent = null;
             gameObject.hideFlags = HideFlags.HideAndDontSave;
             SlotAssetLoader.LoadSlotAsset();
-            SlotEventManager.RegisterEvent(new GoldenGunEvent());
-            SlotEventManager.RegisterEvent(new RevealMapEvent());
-            SlotEventManager.RegisterEvent(new RandomTeleportEvent());
-            SlotEventManager.RegisterEvent(new TimeSlowEvent());
-            SlotEventManager.RegisterEvent(new SurviveHorror());
-            SlotEventManager.RegisterEvent(new BetterWalkieTakkie());
-            SlotEventManager.RegisterEvent(new AlarmEvent());
-            SlotEventManager.RegisterEvent(new MarioStarEvent());
-            SlotEventManager.RegisterEvent(new ExtractionPointHaulModifier());
-            SlotEventManager.RegisterEvent(new RevivePlayerEvent());
-            SlotEventManager.RegisterEvent(new ExplosiveDeathEvent());
+            //SlotEventManager.RegisterEvent(new GoldenGunEvent());
+            //SlotEventManager.RegisterEvent(new RevealMapEvent());
+            //SlotEventManager.RegisterEvent(new RandomTeleportEvent());
+            //SlotEventManager.RegisterEvent(new TimeSlowEvent());
+            //SlotEventManager.RegisterEvent(new SurviveHorror());
+            //SlotEventManager.RegisterEvent(new BetterWalkieTakkie());
+            //SlotEventManager.RegisterEvent(new AlarmEvent());
+            //SlotEventManager.RegisterEvent(new MarioStarEvent());
+            //SlotEventManager.RegisterEvent(new ExtractionPointHaulModifier());
+            //SlotEventManager.RegisterEvent(new RevivePlayerEvent());
+            //SlotEventManager.RegisterEvent(new ExplosiveDeathEvent());
             SlotEventManager.RegisterEvent(new TinyPlayerEvent());
 
             string bundlePath2 = Path.Combine(Paths.PluginPath, "SK0R3N-DifficultyFeature", "assets", "goldengun");
@@ -166,18 +171,7 @@ namespace DifficultyFeature
 
             if (Input.GetKeyDown(KeyCode.F5))
             {
-                //ListHUDObjects();
-            }
-
-            if (Input.GetKeyDown(KeyCode.F6))
-            {
-                //foreach (GameObject go in FindObjectsOfType<GameObject>())
-                //{
-                //    if (go.activeInHierarchy)
-                //    {
-                //        Debug.Log($"[Debug] Active GameObject: {go.name} | Parent: {go.transform.GetComponentFastPath}");
-                //    }
-                //}
+                SlotAssetLoader.ShowSlotMachineUI();
             }
 
             PlayerAvatar playerAvatar = PlayerAvatar.instance;
@@ -211,11 +205,6 @@ namespace DifficultyFeature
             //}
         }
 
-        public string GetComponentInfo(GameObject go)
-        {
-            if (go == null) return "None";
-            var components = go.GetComponents<MonoBehaviour>();
-            if (components.Length == 0) return "No MonoBehaviours";
         private static void WaitForLevelGenerator()
         {
             Debug.LogError("WaitForLevelGenerator");
@@ -227,6 +216,12 @@ namespace DifficultyFeature
             GameObject managerObject = new GameObject("TileActivationManager");
             managerObject.AddComponent<TileActivationManager>();
         }
+
+        public string GetComponentInfo(GameObject go)
+        {
+            if (go == null) return "None";
+            var components = go.GetComponents<MonoBehaviour>();
+            if (components.Length == 0) return "No MonoBehaviours";
 
             System.Text.StringBuilder sb = new();
             foreach (var comp in components)
@@ -473,6 +468,7 @@ namespace DifficultyFeature
                     object[] dataPoints = (object[])photonEvent.CustomData;
                     int points = (int)dataPoints[0];
                     Debug.Log($"[ProgressBar] Event Raised progress increment event with {points} points.");
+                    DifficultySaveManager.SaveProgressBar((int)SlotsChaos.ProgressBar.progress + points);
                     CoroutineRunner.instance.StartCoroutine(SlotsChaos.ProgressBar.UpdateProgress((int)SlotsChaos.ProgressBar.progress + points));
 
                     object[] contentPoints = new object[] { SlotsChaos.ProgressBar.progress };
@@ -487,6 +483,10 @@ namespace DifficultyFeature
                         SlotsChaos.ProgressBar.UpdateProgress(pointsUpdate);
                     }
                     break;
+                case 12:
+                    object[] dataProgress = (object[])photonEvent.CustomData;
+                    SlotsChaos.ProgressBar.progress = (float)dataProgress[0];
+                    break;
             }
         }
 
@@ -497,7 +497,54 @@ namespace DifficultyFeature
             [HarmonyPatch("GenerateDone")]
             private static void Start_Postfix(PunManager __instance)
             {
+                if(SlotsChaos.ProgressBar.currentInstance != null)
+                {
+                    SlotsChaos.ProgressBar.progress = 0;
+                }
+                
                 //WaitForLevelGenerator();
+                if (PhotonNetwork.IsMasterClient)
+                {
+                    foreach (var item in EnemyDirector.instance.enemiesSpawned)
+                    {
+                        switch (DifficultyManager.CurrentDifficulty)
+                        {
+                            case DifficultyManager.DifficultyLevel.Custom:
+                                item.Enemy.Health.healthCurrent = item.Enemy.Health.healthCurrent * DifficultyManager.MultiplierEnemyLife;
+                                item.Enemy.Health.health = item.Enemy.Health.health * DifficultyManager.MultiplierEnemyLife;   
+                                break;
+                            case DifficultyManager.DifficultyLevel.Normal:
+                                item.Enemy.Health.healthCurrent = item.Enemy.Health.healthCurrent * 100;
+                                item.Enemy.Health.health = item.Enemy.Health.health * 100;
+                                break;
+                            case DifficultyManager.DifficultyLevel.Hard:
+                                item.Enemy.Health.healthCurrent = item.Enemy.Health.healthCurrent * 1;
+                                item.Enemy.Health.health = item.Enemy.Health.health * 1;
+                                break;
+                            case DifficultyManager.DifficultyLevel.Hardcore:
+                                item.Enemy.Health.healthCurrent = item.Enemy.Health.healthCurrent * 2;
+                                item.Enemy.Health.health = item.Enemy.Health.health * 2;
+                                break;
+                            case DifficultyManager.DifficultyLevel.Nightmare:
+                                item.Enemy.Health.healthCurrent = item.Enemy.Health.healthCurrent * 2;
+                                item.Enemy.Health.health = item.Enemy.Health.health * 2;
+                                break;
+                            case DifficultyManager.DifficultyLevel.IsThatEvenPossible:
+                                item.Enemy.Health.healthCurrent = item.Enemy.Health.healthCurrent * 3;
+                                item.Enemy.Health.health = item.Enemy.Health.health * 3;
+                                break;
+                            default:
+                                break;
+                        }
+                    }
+
+
+                    object[] contentPoints = new object[] { DifficultySaveManager.LoadProgressBar() };
+                    RaiseEventOptions raiseEventOptions = new RaiseEventOptions { Receivers = ReceiverGroup.All };
+                    PhotonNetwork.RaiseEvent(12, contentPoints, raiseEventOptions, SendOptions.SendReliable);
+                }
+
+                if(DifficultyManager.SlotsActive)
                 SlotsChaos.ProgressBar.LoadProgressAsset();;
             }
         } 

@@ -177,12 +177,51 @@ namespace DifficultyFeature.DifficultyUpdate
                     parent: scroll,
                     stringOptions: options,
                     defaultOption: DifficultyManager.CurrentDifficulty.ToString(),
-                    localPosition: Vector2.zero,
+                    localPosition: new Vector2(0f, 210f),
                     prefix: "",
                     postfix: "",
                     barBehavior: REPOSlider.BarBehavior.UpdateWithValue
 
                 );
+                string[] optionsTrue = new string[] { "true", "false" };
+
+                var SlotSlider = MenuAPI.CreateREPOSlider(
+                    text: "Slot Of Chaos",
+                    description: "Activate the new feature.",
+                    onOptionChanged: (difficulty) =>
+                    {
+                        DifficultyManager.SlotsActive = bool.Parse(difficulty);
+                        DifficultySaveManager.SaveDifficulty(SelectedDifficulty);
+                    },
+                    parent: scroll,
+                    stringOptions: optionsTrue,
+                    defaultOption: DifficultyManager.SlotsActive.ToString(),
+                    localPosition: new Vector2(0f, 160f),
+                    prefix: "",
+                    postfix: "",
+                    barBehavior: REPOSlider.BarBehavior.UpdateWithValue
+
+                );
+
+                var DifficultyScalerSlider = MenuAPI.CreateREPOSlider(
+                    text: "Difficulty Scaler",
+                    description: "Difficulty increases every 6 levels",
+                    onOptionChanged: (difficulty) =>
+                    {
+                        DifficultyManager.SlotsActive = bool.Parse(difficulty);
+                        DifficultySaveManager.SaveDifficulty(SelectedDifficulty);
+                    },
+                    parent: scroll,
+                    stringOptions: optionsTrue,
+                    defaultOption: DifficultyManager.LevelScaler.ToString(),
+                    localPosition: new Vector2(0f, 90f),
+                    prefix: "",
+                    postfix: "",
+                    barBehavior: REPOSlider.BarBehavior.UpdateWithValue
+
+                );
+
+
 
                 // Apply button
                 Vector2 sliderPosition = difficultySlider.rectTransform.anchoredPosition;
@@ -549,6 +588,25 @@ namespace DifficultyFeature.DifficultyUpdate
                         barBehavior: REPOSlider.BarBehavior.UpdateWithValue
                     );
 
+                    MenuAPI.CreateREPOSlider(
+                        $"Multiplier Enemy Life",
+                        "",
+                        val =>
+                        {
+                            DifficultyManager.MultiplierEnemyLife = (int)val;
+                            DifficultySaveManager.SaveDifficulty("Custom"); // Save after change
+                        },
+                        scroll,
+                        min: 1,
+                        max: 10,
+                        precision: 0,
+                        localPosition: new Vector2(0f, 30f),
+                        defaultValue: DifficultyManager.MultiplierEnemyLife,
+                        prefix: "",
+                        postfix: "",
+                        barBehavior: REPOSlider.BarBehavior.UpdateWithValue
+                    );
+
                     return scroll as RectTransform;
                 });
             }
@@ -565,6 +623,7 @@ namespace DifficultyFeature.DifficultyUpdate
                     MenuAPI.CreateREPOLabel($"Valuable boost (x1)", popupPageDifficulty.transform, localPosition: new Vector2(350f, 250f - 150));
                     MenuAPI.CreateREPOLabel($"Shop price (x1)", popupPageDifficulty.transform, localPosition: new Vector2(350f, 250f - 180));
                     MenuAPI.CreateREPOLabel($"Average Difficulty room (1)", popupPageDifficulty.transform, localPosition: new Vector2(350f, 250f - 210));
+                    MenuAPI.CreateREPOLabel($"Enemy Multiplier Life (x1)", popupPageDifficulty.transform, localPosition: new Vector2(350f, 250f - 240));
 
                 }
                 else if (difficulty == "Hard")
@@ -576,6 +635,7 @@ namespace DifficultyFeature.DifficultyUpdate
                     MenuAPI.CreateREPOLabel($"Valuable boost (x2)", popupPageDifficulty.transform, localPosition: new Vector2(350f, 250f - 150));
                     MenuAPI.CreateREPOLabel($"Shop price (x1.5)", popupPageDifficulty.transform, localPosition: new Vector2(350f, 250f - 180));
                     MenuAPI.CreateREPOLabel($"Average Difficulty room (1)", popupPageDifficulty.transform, localPosition: new Vector2(350f, 250f - 210));
+                    MenuAPI.CreateREPOLabel($"Enemy Multiplier Life (x1)", popupPageDifficulty.transform, localPosition: new Vector2(350f, 250f - 240));
                 }
                 else if (difficulty == "Hardcore")
                 {
@@ -586,6 +646,7 @@ namespace DifficultyFeature.DifficultyUpdate
                     MenuAPI.CreateREPOLabel($"Valuable boost (x3)", popupPageDifficulty.transform, localPosition: new Vector2(350f, 250f - 150));
                     MenuAPI.CreateREPOLabel($"Shop price (x2)", popupPageDifficulty.transform, localPosition: new Vector2(350f, 250f - 180));
                     MenuAPI.CreateREPOLabel($"Average Difficulty room (1 & 2)", popupPageDifficulty.transform, localPosition: new Vector2(350f, 250f - 210));
+                    MenuAPI.CreateREPOLabel($"Enemy Multiplier Life (x2)", popupPageDifficulty.transform, localPosition: new Vector2(350f, 250f - 240));
                 }
                 else if (difficulty == "Nightmare")
                 {
@@ -596,6 +657,7 @@ namespace DifficultyFeature.DifficultyUpdate
                     MenuAPI.CreateREPOLabel($"Valuable boost (x4)", popupPageDifficulty.transform, localPosition: new Vector2(350f, 250f - 150));
                     MenuAPI.CreateREPOLabel($"Shop price Cx2.5)", popupPageDifficulty.transform, localPosition: new Vector2(350f, 250f - 180));
                     MenuAPI.CreateREPOLabel($"Average Difficulty room (1 & 2 & 3)", popupPageDifficulty.transform, localPosition: new Vector2(350f, 250f - 210));
+                    MenuAPI.CreateREPOLabel($"Enemy Multiplier Life (x2)", popupPageDifficulty.transform, localPosition: new Vector2(350f, 250f - 240));
                 }
                 else if (difficulty == "IsThatEvenPossible")
                 {
@@ -606,6 +668,7 @@ namespace DifficultyFeature.DifficultyUpdate
                     MenuAPI.CreateREPOLabel($"Valuable boost (x5)", popupPageDifficulty.transform, localPosition: new Vector2(350f, 250f - 150));
                     MenuAPI.CreateREPOLabel($"Shop price (x3)", popupPageDifficulty.transform, localPosition: new Vector2(350f, 250f - 180));
                     MenuAPI.CreateREPOLabel($"Average Difficulty room (2 & 3)", popupPageDifficulty.transform, localPosition: new Vector2(350f, 250f - 210));
+                    MenuAPI.CreateREPOLabel($"Enemy Multiplier Life (x3)", popupPageDifficulty.transform, localPosition: new Vector2(350f, 250f - 240));
                 }
             }
         }

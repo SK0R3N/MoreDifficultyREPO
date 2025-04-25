@@ -288,16 +288,16 @@ namespace DifficultyFeature.DifficultyUpdate.GenerationRework
             }
             if (active)
             {
-                //StartCoroutine(ActivateRenderersOverTime(tileObject, 2f));
-                //MeshCollider[] colliders = tileObjects[tilePos].GetComponentsInChildren<MeshCollider>(true);
-                //foreach (MeshCollider collider in colliders)
-                //{
-                //    collider.enabled = true;
-                //    //if (debugEnabled)
-                //    //{
-                //    //    Debug.Log($"MeshCollider activé : {collider.gameObject.name} pour la tuile {tilePos}");
-                //    //}
-                //}
+                StartCoroutine(ActivateRenderersOverTime(tileObject, 2f));
+                MeshCollider[] colliders = tileObjects[tilePos].GetComponentsInChildren<MeshCollider>(true);
+                foreach (MeshCollider collider in colliders)
+                {
+                    collider.enabled = true;
+                    //if (debugEnabled)
+                    //{
+                    //    Debug.Log($"MeshCollider activé : {collider.gameObject.name} pour la tuile {tilePos}");
+                    //}
+                }
             }
             else
             {

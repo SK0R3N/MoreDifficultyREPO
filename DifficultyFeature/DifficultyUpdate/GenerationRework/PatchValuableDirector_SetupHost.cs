@@ -184,10 +184,10 @@ namespace DifficultyFeature.DifficultyUpdate.GenerationRework
 
         public static float GetValuableMultiplier(DifficultyLevel difficulty) => difficulty switch
         {
-            DifficultyLevel.Hard => 2f,
-            DifficultyLevel.Hardcore => 3f,
-            DifficultyLevel.Nightmare => 4f,
-            DifficultyLevel.IsThatEvenPossible => 5f,
+            DifficultyLevel.Hard => 1.5f,
+            DifficultyLevel.Hardcore => 1.5f,
+            DifficultyLevel.Nightmare => 2f,
+            DifficultyLevel.IsThatEvenPossible => 3f,
             DifficultyLevel.Custom => ValuableMultiplier,
             _ => 1f
         };

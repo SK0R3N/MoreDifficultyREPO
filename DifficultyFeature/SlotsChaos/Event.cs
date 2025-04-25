@@ -245,7 +245,24 @@ namespace DifficultyFeature
                             {
                                 Debug.Log($"[TinyPlayerEvent] Adjusted camera for {avatar.playerName} to {t.transform.position}");
                                 if (t.name.ToLower() == "map tool")
-                                    t.transform.position += UnityEngine.Vector3.up * cameraOffsetY;
+                                    t.transform.position += UnityEngine.Vector3.up * (cameraOffsetY - 0.1f);
+                                Debug.Log($"[TinyPlayerEvent] Adjusted camera for {avatar.playerName} to {t.transform.position}");
+                            }
+                            catch
+                            {
+                                Debug.Log(t.name);
+                            }
+
+                        }
+                        foreach (Transform t in avatar.flashlightController.transform.parent)
+                        {
+                            Debug.Log("Flashlight : " + t.name);
+
+                            try
+                            {
+                                Debug.Log($"[TinyPlayerEvent] Adjusted camera for {avatar.playerName} to {t.transform.position}");
+                                if (t.name.ToLower() == "flashlight")
+                                    t.transform.position += UnityEngine.Vector3.up * (cameraOffsetY - 0.1f);
                                 Debug.Log($"[TinyPlayerEvent] Adjusted camera for {avatar.playerName} to {t.transform.position}");
                             }
                             catch
@@ -354,7 +371,7 @@ namespace DifficultyFeature
                 public static void Postfix(PlayerAvatar __instance)
                 {
                     if (__instance.isLocal && IsTinyPlayerActive)
-                    { 
+                    {
 
                         if (__instance.isCrouching)
                         {
@@ -368,6 +385,7 @@ namespace DifficultyFeature
                                 //Debug.Log("cam trop basse");
                                 __instance.localCamera.transform.position = new UnityEngine.Vector3(currentPos.x, __instance.transform.position.y + 0.1f, currentPos.z);
                                 Debug.Log($"[TinyPlayerEventPatch] Caméra ajustée pour joueur accroupi tiny {__instance.playerName} : Y={minY}");
+
                             }
                         }
                         else if (__instance.isDisabled)
@@ -394,19 +412,19 @@ namespace DifficultyFeature
                                     TinyPlayerManager.RevertTinyEffectRPC(__instance);
                                 }
                             }
-                            else if (__instance.isGrounded)
+
+                        }
+                        else if (__instance.isGrounded)
+                        {
+                            //Debug.Log("[cam] y :" + __instance.localCamera.transform.position.y);
+                            //Debug.Log("[position] y :" + (__instance.transform.position.y + 0.4));
+                            if (__instance.localCamera.transform.position.y > (__instance.transform.position.y + 0.4) || __instance.transform.position.y < 0.2)
                             {
-                                //Debug.Log("[cam] y :" + __instance.localCamera.transform.position.y);
-                                //Debug.Log("[position] y :" + (__instance.transform.position.y + 0.4));
-                                if (__instance.localCamera.transform.position.y > (__instance.transform.position.y + 0.4) || __instance.transform.position.y < 0.2)
-                                {
-                                    UnityEngine.Vector3 currentPos = __instance.transform.position;
-                                    //Debug.Log("cam trop basse");
-                                    __instance.localCamera.transform.position = new UnityEngine.Vector3(currentPos.x, __instance.transform.position.y + 0.2f, currentPos.z);
-                                }
+                                UnityEngine.Vector3 currentPos = __instance.transform.position;
+                                //Debug.Log("cam trop basse");
+                                __instance.localCamera.transform.position = new UnityEngine.Vector3(currentPos.x, __instance.transform.position.y + 0.2f, currentPos.z);
+
                             }
-
-
                         }
                     }
                 }

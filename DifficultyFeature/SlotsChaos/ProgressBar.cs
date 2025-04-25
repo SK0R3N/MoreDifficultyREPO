@@ -94,11 +94,6 @@ namespace DifficultyFeature.SlotsChaos
             currentInstance.SetActive(false);
             currentInstanceProgress.gameObject.SetActive(false);
 
-            // Initialiser la progression
-            progress = 260;
-            double progressNormalized = progress / PROGRESSMAX;
-            currentInstanceProgress.fillAmount = Mathf.Clamp01((float)progressNormalized);
-
             Debug.Log($"[SlotAssetLoader] Slot parented under: {hudCanvas.name}");
 
             foreach (Transform child in currentInstance.transform)
@@ -193,7 +188,7 @@ namespace DifficultyFeature.SlotsChaos
                     double pourcentage = (newProgress - progress > 0 ? (newProgress - i) / newProgress : (progress - i) / progress);
                     yield return new WaitForSeconds(0.04f * (float)pourcentage);
 
-                    if(progress + i == PROGRESSMAX)
+                    if(progress + i >= PROGRESSMAX)
                     {
                         yield return new WaitForSeconds(0.5f);
                         CoroutineRunner.instance.StartCoroutine(AnimatePopOut(currentInstance, 0.3f));
@@ -204,6 +199,11 @@ namespace DifficultyFeature.SlotsChaos
                         progress = 260;
                         double progressNormalized2 = progress / PROGRESSMAX;
                         currentInstanceProgress.fillAmount = Mathf.Clamp01((float)progressNormalized2);
+
+                        if(PhotonNetwork.IsMasterClient)
+                        {
+                            DifficultySaveManager.SaveProgressBar((float)progress);
+                        }
                         break;
                     }
 

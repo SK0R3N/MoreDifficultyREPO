@@ -4,6 +4,7 @@ using ExitGames.Client.Photon;
 using HarmonyLib;
 using REPOLib;
 using SingularityGroup.HotReload;
+using Steamworks.Ugc;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -11,6 +12,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using UnityEngine;
+using UnityEngine.SearchService;
 using static DifficultyFeature.DifficultyUpdate.DifficultyManager;
 
 namespace DifficultyFeature.DifficultyUpdate.GenerationRework
@@ -112,6 +114,68 @@ namespace DifficultyFeature.DifficultyUpdate.GenerationRework
                 FieldInfo gridField = AccessTools.Field(typeof(LevelGenerator), "LevelGrid");
                 var grid = new LevelGenerator.Tile[width, height];
 
+                if((RunManager.instance.levelsCompleted % 6) + 1 == 6 && DifficultyManager.LevelScaler)
+                {
+                    switch (DifficultyManager.CurrentDifficulty)
+                    {
+                        case DifficultyManager.DifficultyLevel.Normal:
+                            switch (RunManager.instance.levelsCompleted)
+                            {
+                                case 5:
+                                    DifficultyManager.CurrentDifficulty = DifficultyManager.DifficultyLevel.Hard;
+                                    break;
+                                case 11:
+                                    DifficultyManager.CurrentDifficulty = DifficultyManager.DifficultyLevel.Hardcore;
+                                    break;
+                                case 17:
+                                    DifficultyManager.CurrentDifficulty = DifficultyManager.DifficultyLevel.Nightmare;
+                                    break;
+                                case 23:
+                                    DifficultyManager.CurrentDifficulty = DifficultyManager.DifficultyLevel.IsThatEvenPossible;
+                                    break;
+                            }
+
+                            break;
+                        case DifficultyManager.DifficultyLevel.Hard:
+                            switch (RunManager.instance.levelsCompleted)
+                            {
+                                case 5:
+                                    DifficultyManager.CurrentDifficulty = DifficultyManager.DifficultyLevel.Hardcore;
+                                    break;
+                                case 11:
+                                    DifficultyManager.CurrentDifficulty = DifficultyManager.DifficultyLevel.Nightmare;
+                                    break;
+                                case 17:
+                                    DifficultyManager.CurrentDifficulty = DifficultyManager.DifficultyLevel.IsThatEvenPossible;
+                                    break;
+                            }
+                            break;
+                        case DifficultyManager.DifficultyLevel.Hardcore:
+                            switch (RunManager.instance.levelsCompleted)
+                            {
+                                case 5:
+                                    DifficultyManager.CurrentDifficulty = DifficultyManager.DifficultyLevel.Nightmare;
+                                    break;
+                                case 11:
+                                    DifficultyManager.CurrentDifficulty = DifficultyManager.DifficultyLevel.IsThatEvenPossible;
+                                    break;
+                            }
+                            break;
+                        case DifficultyManager.DifficultyLevel.Nightmare:
+                            switch (RunManager.instance.levelsCompleted)
+                            {
+                                case 5:
+                                    DifficultyManager.CurrentDifficulty = DifficultyManager.DifficultyLevel.IsThatEvenPossible;
+                                    break;
+                            }
+                            break;
+                        default:
+                            break;
+                    }
+                    DifficultySaveManager.SaveDifficulty(DifficultyManager.CurrentDifficulty.ToString());
+                }
+
+
                 for (int x = 0; x < width; x++)
                 {
                     for (int y = 0; y < height; y++)
@@ -136,9 +200,9 @@ namespace DifficultyFeature.DifficultyUpdate.GenerationRework
                 }
 
                 int moduleCount = DifficultyManager2.GetModifiedModuleAmount() + RunManager.instance.levelsCompleted * 2;
-                if (moduleCount > 30)
+                if (moduleCount > DifficultyManager2.GetMaxModuleAmount())
                 {
-                    moduleCount = 30;
+                    moduleCount = DifficultyManager2.GetMaxModuleAmount();
                 }
 
                 var difficulty = CurrentDifficulty;
@@ -492,9 +556,24 @@ namespace DifficultyFeature.DifficultyUpdate.GenerationRework
                 case DifficultyLevel.Hard: return 8;
                 case DifficultyLevel.Hardcore: return 10;
                 case DifficultyLevel.Nightmare: return 12;
-                case DifficultyLevel.IsThatEvenPossible: return 15;
+                case DifficultyLevel.IsThatEvenPossible: return 20;
                 case DifficultyLevel.Custom: return CustomRoom();
                 default: return 8;
+            }
+        }
+
+        public static int GetMaxModuleAmount()
+        {
+            Log.LogInfo($"[CustomTileGen] Difficulty: {CurrentDifficulty}");
+            switch (CurrentDifficulty)
+            {
+                case DifficultyLevel.Normal: return 12;
+                case DifficultyLevel.Hard: return 14;
+                case DifficultyLevel.Hardcore: return 16;
+                case DifficultyLevel.Nightmare: return 18;
+                case DifficultyLevel.IsThatEvenPossible: return 20;
+                case DifficultyLevel.Custom: return CustomRoom();
+                default: return 12;
             }
         }
 
@@ -528,7 +607,7 @@ namespace DifficultyFeature.DifficultyUpdate.GenerationRework
             DifficultyLevel.Hard => 1,
             DifficultyLevel.Hardcore => 2,
             DifficultyLevel.Nightmare => 3,
-            DifficultyLevel.IsThatEvenPossible => 4,
+            DifficultyLevel.IsThatEvenPossible => 8,
             DifficultyLevel.Custom => ExtractionMultiplier,
             _ => 1
         };
@@ -536,10 +615,10 @@ namespace DifficultyFeature.DifficultyUpdate.GenerationRework
         public static int GetExtractionCap(DifficultyLevel difficulty) => difficulty switch
         {
             DifficultyLevel.Normal => 3,
-            DifficultyLevel.Hard => 5,
-            DifficultyLevel.Hardcore => 7,
-            DifficultyLevel.Nightmare => 9,
-            DifficultyLevel.IsThatEvenPossible => 11,
+            DifficultyLevel.Hard => 4,
+            DifficultyLevel.Hardcore => 5,
+            DifficultyLevel.Nightmare => 6,
+            DifficultyLevel.IsThatEvenPossible => 8,
             DifficultyLevel.Custom => ExtractionMaxMultiplier,
             _ => 4
         };

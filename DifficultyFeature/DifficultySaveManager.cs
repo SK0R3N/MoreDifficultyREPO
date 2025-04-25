@@ -20,7 +20,7 @@ using static System.Collections.Specialized.BitVector32;
 using static UnityEngine.ParticleSystem;
 using static UnityEngine.UIElements.UxmlAttributeDescription;
 using DifficultyFeature.DifficultyUpdate;
-using static MyMOD.DifficultyManager;
+using static DifficultyFeature.DifficultyUpdate.DifficultyManager;
 
 namespace DifficultyFeature
 {
@@ -35,6 +35,9 @@ namespace DifficultyFeature
         public int EnemyMultiplier;
         public float ShopMultiplier;
         public int ValuableMultiplier;
+        public int EnemyLifeMultiplier;
+        public bool SlotsActive;
+        public bool LevelScaler;
 
         public CustomDifficultySettings()
         {
@@ -46,6 +49,9 @@ namespace DifficultyFeature
             EnemyMultiplier = DifficultyManager.EnemyMultiplier;
             ShopMultiplier = DifficultyManager.ShopMultiplier;
             ValuableMultiplier = DifficultyManager.ValuableMultiplier;
+            EnemyLifeMultiplier = DifficultyManager.MultiplierEnemyLife;
+            LevelScaler = DifficultyManager.LevelScaler;
+            SlotsActive = DifficultyManager.SlotsActive;
         }
     }
 
@@ -54,19 +60,14 @@ namespace DifficultyFeature
     {
         public string DifficultyName;
         public CustomDifficultySettings CustomSettings;
+        public HashSet<string> WalkieWinnerSteamIDs { get; set; } = new HashSet<string>();
+        public float ProgressBar { get; set; }
     }
 
     public static class DifficultySaveManager
     {
         private static string savePath = Path.Combine(Paths.PluginPath, "SK0R3N-DifficultyFeature", "DifficultySaves.json");
         private static Dictionary<string, DifficultyData> difficultyData = new();
-
-        // Classe pour structurer les données sauvegardées
-        private class SaveData
-        {
-            public string Difficulty { get; set; } = "Normal";
-            public HashSet<string> WalkieWinnerSteamIDs { get; set; } = new HashSet<string>(); // Ensemble de gagnants
-        }
 
         static DifficultySaveManager()
         {
@@ -81,27 +82,65 @@ namespace DifficultyFeature
             {
                 Directory.CreateDirectory(directory);
             }
+            
+            if(!difficultyData.ContainsKey(saveFileName))
+            {
+                difficultyData[saveFileName] = new DifficultyData();
+            }
 
             difficultyData[saveFileName] = new DifficultyData
             {
                 DifficultyName = difficultyName,
-                CustomSettings = new CustomDifficultySettings()
+                CustomSettings = new CustomDifficultySettings(),
+                WalkieWinnerSteamIDs = difficultyData[saveFileName].WalkieWinnerSteamIDs,
+                ProgressBar = difficultyData[saveFileName].ProgressBar,
             };
 
-            File.WriteAllText(savePath, JsonConvert.SerializeObject(difficultyData, Formatting.Indented));
+            File.WriteAllText(savePath, JsonConvert.SerializeObject(difficultyData, Newtonsoft.Json.Formatting.Indented));
             Debug.Log($"[DifficultySaveManager] Difficulté sauvegardée pour {saveFileName}: {difficultyName}");
         }
 
         public static void AddWalkieWinner(string steamID)
         {
             string saveFileName = StatsManager.instance.saveFileCurrent;
-            if (!saveData.ContainsKey(saveFileName))
+            if (!difficultyData.ContainsKey(saveFileName))
             {
-                saveData[saveFileName] = new SaveData();
+                difficultyData[saveFileName] = new DifficultyData();
             }
-            saveData[saveFileName].WalkieWinnerSteamIDs.Add(steamID);
+            difficultyData[saveFileName].WalkieWinnerSteamIDs.Add(steamID);
             SaveToFile();
             Debug.Log($"[DifficultySaveManager] Added WalkieWinner for {saveFileName}: {steamID}");
+        }
+
+        public static void SaveProgressBar(float progress)
+        {
+            string saveFileName = StatsManager.instance.saveFileCurrent;
+            if (!difficultyData.ContainsKey(saveFileName))
+            {
+                difficultyData[saveFileName] = new DifficultyData();
+            }
+            difficultyData[saveFileName].ProgressBar = progress;
+            SaveToFile();
+        }
+
+        public static float LoadProgressBar()
+        {
+            try
+            {
+                if (difficultyData.TryGetValue(StatsManager.instance.saveFileCurrent, out DifficultyData data))
+                {
+                    if(data.ProgressBar >= 260)
+                    return data.ProgressBar;
+
+                    SaveProgressBar(260);
+                    return 260f;
+                }
+            } catch {
+                SaveProgressBar(260);
+                return 260f;
+            }
+
+            return 260f;
         }
 
         public static string LoadDifficulty(string saveFileName)
@@ -118,7 +157,10 @@ namespace DifficultyFeature
                 DifficultyManager.EnemyMultiplier = data.CustomSettings.EnemyMultiplier;
                 DifficultyManager.ShopMultiplier = data.CustomSettings.ShopMultiplier;
                 DifficultyManager.ValuableMultiplier = data.CustomSettings.ValuableMultiplier;
+                DifficultyManager.MultiplierEnemyLife = data.CustomSettings.EnemyLifeMultiplier;
                 DifficultyManager.CurrentDifficulty = Enum.Parse<DifficultyLevel>(data.DifficultyName);
+                DifficultyManager.LevelScaler = data.CustomSettings.LevelScaler;
+                DifficultyManager.SlotsActive = data.CustomSettings.SlotsActive;
                 return data.DifficultyName;
             }
 
@@ -130,7 +172,7 @@ namespace DifficultyFeature
 
         public static HashSet<string> LoadWalkieWinners(string saveFileName)
         {
-            if (saveData.TryGetValue(saveFileName, out SaveData data))
+            if (difficultyData.TryGetValue(saveFileName, out DifficultyData data))
             {
                 return data.WalkieWinnerSteamIDs;
             }
@@ -139,7 +181,7 @@ namespace DifficultyFeature
 
         private static void SaveToFile()
         {
-            File.WriteAllText(savePath, JsonConvert.SerializeObject(saveData, Newtonsoft.Json.Formatting.Indented));
+            File.WriteAllText(savePath, JsonConvert.SerializeObject(difficultyData, Newtonsoft.Json.Formatting.Indented));
         }
 
         private static void Load()
@@ -176,7 +218,7 @@ namespace DifficultyFeature
                             };
                         }
                         // Sauvegarder dans le nouveau format
-                        File.WriteAllText(savePath, JsonConvert.SerializeObject(difficultyData, Formatting.Indented));
+                        File.WriteAllText(savePath, JsonConvert.SerializeObject(difficultyData, Newtonsoft.Json.Formatting.Indented));
                         Debug.Log("[DifficultySaveManager] Conversion de l'ancien format terminée et sauvegardée.");
                     }
                     else
