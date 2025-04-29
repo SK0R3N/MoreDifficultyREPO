@@ -156,7 +156,7 @@ namespace DifficultyFeature.DifficultyUpdate
 
             popupPage.AddElementToScrollView(scroll =>
             {
-                string[] options = new string[] { "Custom", "Normal", "Hard", "Hardcore", "Nightmare", "IsThatEvenPossible" };
+                string[] options = new string[] { "Custom", "Normal", "Hard", "Hardcore", "Nightmare", "IsThatEvenPossible", "CrazyMonster" };
 
                 // CreateREPOSlider(string text, string description, Action<string> onOptionChanged, Transform parent, string[] stringOptions, string defaultOption, Vector2 localPosition = default(Vector2), string prefix = "", string postfix = "", REPOSlider.BarBehavior barBehavior = REPOSlider.BarBehavior.UpdateWithValue)
                 var difficultySlider = MenuAPI.CreateREPOSlider(
@@ -185,30 +185,12 @@ namespace DifficultyFeature.DifficultyUpdate
                 );
                 string[] optionsTrue = new string[] { "true", "false" };
 
-                var SlotSlider = MenuAPI.CreateREPOSlider(
-                    text: "Slot Of Chaos",
-                    description: "Activate the new feature.",
-                    onOptionChanged: (difficulty) =>
-                    {
-                        DifficultyManager.SlotsActive = bool.Parse(difficulty);
-                        DifficultySaveManager.SaveDifficulty(SelectedDifficulty);
-                    },
-                    parent: scroll,
-                    stringOptions: optionsTrue,
-                    defaultOption: DifficultyManager.SlotsActive.ToString(),
-                    localPosition: new Vector2(0f, 160f),
-                    prefix: "",
-                    postfix: "",
-                    barBehavior: REPOSlider.BarBehavior.UpdateWithValue
-
-                );
-
                 var DifficultyScalerSlider = MenuAPI.CreateREPOSlider(
                     text: "Difficulty Scaler",
                     description: "Difficulty increases every 6 levels",
                     onOptionChanged: (difficulty) =>
                     {
-                        DifficultyManager.SlotsActive = bool.Parse(difficulty);
+                        DifficultyManager.LevelScaler = bool.Parse(difficulty);
                         DifficultySaveManager.SaveDifficulty(SelectedDifficulty);
                     },
                     parent: scroll,

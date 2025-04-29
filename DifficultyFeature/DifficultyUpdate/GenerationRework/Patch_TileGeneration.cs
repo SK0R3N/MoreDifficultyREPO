@@ -556,7 +556,8 @@ namespace DifficultyFeature.DifficultyUpdate.GenerationRework
                 case DifficultyLevel.Hard: return 8;
                 case DifficultyLevel.Hardcore: return 10;
                 case DifficultyLevel.Nightmare: return 12;
-                case DifficultyLevel.IsThatEvenPossible: return 20;
+                case DifficultyLevel.IsThatEvenPossible: return 14;
+                case DifficultyLevel.CrazyMonster: return 10;
                 case DifficultyLevel.Custom: return CustomRoom();
                 default: return 8;
             }
@@ -572,6 +573,7 @@ namespace DifficultyFeature.DifficultyUpdate.GenerationRework
                 case DifficultyLevel.Hardcore: return 16;
                 case DifficultyLevel.Nightmare: return 18;
                 case DifficultyLevel.IsThatEvenPossible: return 20;
+                case DifficultyLevel.CrazyMonster: return 16;
                 case DifficultyLevel.Custom: return CustomRoom();
                 default: return 12;
             }
@@ -607,7 +609,8 @@ namespace DifficultyFeature.DifficultyUpdate.GenerationRework
             DifficultyLevel.Hard => 1,
             DifficultyLevel.Hardcore => 2,
             DifficultyLevel.Nightmare => 3,
-            DifficultyLevel.IsThatEvenPossible => 8,
+            DifficultyLevel.IsThatEvenPossible => 4,
+            DifficultyLevel.CrazyMonster => 0,
             DifficultyLevel.Custom => ExtractionMultiplier,
             _ => 1
         };
@@ -619,6 +622,7 @@ namespace DifficultyFeature.DifficultyUpdate.GenerationRework
             DifficultyLevel.Hardcore => 5,
             DifficultyLevel.Nightmare => 6,
             DifficultyLevel.IsThatEvenPossible => 8,
+            DifficultyLevel.CrazyMonster => 3,
             DifficultyLevel.Custom => ExtractionMaxMultiplier,
             _ => 4
         };

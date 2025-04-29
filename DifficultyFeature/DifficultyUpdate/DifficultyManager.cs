@@ -15,7 +15,8 @@ namespace DifficultyFeature.DifficultyUpdate
             Hard,
             Hardcore,
             Nightmare,
-            IsThatEvenPossible
+            IsThatEvenPossible,
+            CrazyMonster
         }
 
         public static DifficultyLevel CurrentDifficulty = DifficultyLevel.Normal;
@@ -30,7 +31,6 @@ namespace DifficultyFeature.DifficultyUpdate
         public static int PourcentageRoom3 = 0;
         public static string DifficultyPreset = "None";
         public static int MultiplierEnemyLife = 1;
-        public static bool SlotsActive = true;
         public static bool LevelScaler = true;
 
     }

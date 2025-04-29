@@ -26,6 +26,7 @@ public static class Patch_LevelGeneratorStart
             DifficultyLevel.Hardcore => 2f,
             DifficultyLevel.Nightmare => 2f,
             DifficultyLevel.IsThatEvenPossible => 3f,
+            DifficultyLevel.CrazyMonster => 2f,
             DifficultyLevel.Custom => 1f,
             _ => 1f
         };

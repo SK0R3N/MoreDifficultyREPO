@@ -106,6 +106,7 @@ namespace DifficultyFeature.DifficultyUpdate.GenerationRework
                 case DifficultyManager.DifficultyLevel.Hardcore: return baseCount + 3;
                 case DifficultyManager.DifficultyLevel.Nightmare: return baseCount + 5;
                 case DifficultyManager.DifficultyLevel.IsThatEvenPossible: return baseCount + 8;
+                case DifficultyManager.DifficultyLevel.CrazyMonster: return baseCount + 10;
                 case DifficultyManager.DifficultyLevel.Custom: return DifficultyManager.EnemyMultiplier;
                 default: return baseCount;
             }
@@ -188,6 +189,7 @@ namespace DifficultyFeature.DifficultyUpdate.GenerationRework
             DifficultyLevel.Hardcore => 1.5f,
             DifficultyLevel.Nightmare => 2f,
             DifficultyLevel.IsThatEvenPossible => 3f,
+            DifficultyLevel.CrazyMonster => 2f,
             DifficultyLevel.Custom => ValuableMultiplier,
             _ => 1f
         };
@@ -198,6 +200,7 @@ namespace DifficultyFeature.DifficultyUpdate.GenerationRework
             DifficultyLevel.Hardcore => 2f,
             DifficultyLevel.Nightmare => 2.5f,
             DifficultyLevel.IsThatEvenPossible => 3f,
+            DifficultyLevel.CrazyMonster => 0.5f,
             DifficultyLevel.Custom => ShopMultiplier,
             _ => 1f
         };

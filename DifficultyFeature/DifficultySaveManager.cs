@@ -13,7 +13,6 @@ using System.Runtime.ConstrainedExecution;
 using System.Text;
 using System.Xml;
 using UnityEngine;
-using static DifficultyFeature.Event;
 using WebSocketSharp;
 using static EnemyParent;
 using static System.Collections.Specialized.BitVector32;
@@ -36,7 +35,6 @@ namespace DifficultyFeature
         public float ShopMultiplier;
         public int ValuableMultiplier;
         public int EnemyLifeMultiplier;
-        public bool SlotsActive;
         public bool LevelScaler;
 
         public CustomDifficultySettings()
@@ -51,7 +49,6 @@ namespace DifficultyFeature
             ValuableMultiplier = DifficultyManager.ValuableMultiplier;
             EnemyLifeMultiplier = DifficultyManager.MultiplierEnemyLife;
             LevelScaler = DifficultyManager.LevelScaler;
-            SlotsActive = DifficultyManager.SlotsActive;
         }
     }
 
@@ -60,8 +57,6 @@ namespace DifficultyFeature
     {
         public string DifficultyName;
         public CustomDifficultySettings CustomSettings;
-        public HashSet<string> WalkieWinnerSteamIDs { get; set; } = new HashSet<string>();
-        public float ProgressBar { get; set; }
     }
 
     public static class DifficultySaveManager
@@ -92,56 +87,12 @@ namespace DifficultyFeature
             {
                 DifficultyName = difficultyName,
                 CustomSettings = new CustomDifficultySettings(),
-                WalkieWinnerSteamIDs = difficultyData[saveFileName].WalkieWinnerSteamIDs,
-                ProgressBar = difficultyData[saveFileName].ProgressBar,
             };
 
             File.WriteAllText(savePath, JsonConvert.SerializeObject(difficultyData, Newtonsoft.Json.Formatting.Indented));
             Debug.Log($"[DifficultySaveManager] Difficulté sauvegardée pour {saveFileName}: {difficultyName}");
         }
 
-        public static void AddWalkieWinner(string steamID)
-        {
-            string saveFileName = StatsManager.instance.saveFileCurrent;
-            if (!difficultyData.ContainsKey(saveFileName))
-            {
-                difficultyData[saveFileName] = new DifficultyData();
-            }
-            difficultyData[saveFileName].WalkieWinnerSteamIDs.Add(steamID);
-            SaveToFile();
-            Debug.Log($"[DifficultySaveManager] Added WalkieWinner for {saveFileName}: {steamID}");
-        }
-
-        public static void SaveProgressBar(float progress)
-        {
-            string saveFileName = StatsManager.instance.saveFileCurrent;
-            if (!difficultyData.ContainsKey(saveFileName))
-            {
-                difficultyData[saveFileName] = new DifficultyData();
-            }
-            difficultyData[saveFileName].ProgressBar = progress;
-            SaveToFile();
-        }
-
-        public static float LoadProgressBar()
-        {
-            try
-            {
-                if (difficultyData.TryGetValue(StatsManager.instance.saveFileCurrent, out DifficultyData data))
-                {
-                    if(data.ProgressBar >= 260)
-                    return data.ProgressBar;
-
-                    SaveProgressBar(260);
-                    return 260f;
-                }
-            } catch {
-                SaveProgressBar(260);
-                return 260f;
-            }
-
-            return 260f;
-        }
 
         public static string LoadDifficulty(string saveFileName)
         {
@@ -160,7 +111,6 @@ namespace DifficultyFeature
                 DifficultyManager.MultiplierEnemyLife = data.CustomSettings.EnemyLifeMultiplier;
                 DifficultyManager.CurrentDifficulty = Enum.Parse<DifficultyLevel>(data.DifficultyName);
                 DifficultyManager.LevelScaler = data.CustomSettings.LevelScaler;
-                DifficultyManager.SlotsActive = data.CustomSettings.SlotsActive;
                 return data.DifficultyName;
             }
 
@@ -168,15 +118,6 @@ namespace DifficultyFeature
             Debug.Log($"[DifficultySaveManager] Aucune difficulté trouvée pour {saveFileName}, utilisation de Normal par défaut.");
             SaveDifficulty("Normal");
             return "Normal";
-        }
-
-        public static HashSet<string> LoadWalkieWinners(string saveFileName)
-        {
-            if (difficultyData.TryGetValue(saveFileName, out DifficultyData data))
-            {
-                return data.WalkieWinnerSteamIDs;
-            }
-            return new HashSet<string>(); // Aucun gagnant
         }
 
         private static void SaveToFile()
