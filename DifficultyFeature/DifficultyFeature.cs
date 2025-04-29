@@ -29,16 +29,15 @@ namespace DifficultyFeature
     [BepInPlugin("SK0R3N.DifficultyFeature", "DifficultyFeature", "1.0")]
     public class DifficultyFeature : BaseUnityPlugin 
     {
+        private bool subscribed = false;
+
         internal static DifficultyFeature Instance { get; private set; } = null!;
         internal new static ManualLogSource Logger => Instance._logger;
         private ManualLogSource _logger => base.Logger;
         internal Harmony? Harmony { get; set; }
-        private bool subscribed = false;
-
-
-
 
         public static int DifficultyLevel { get; set; } = 1;
+
 
         private void Awake()
         {
@@ -48,14 +47,6 @@ namespace DifficultyFeature
             gameObject.transform.parent = null;
             gameObject.hideFlags = HideFlags.HideAndDontSave;
 
-            string bundlePath2 = Path.Combine(Paths.PluginPath, "SK0R3N-DifficultyFeature", "assets", "goldengun");
-            AssetBundle bundle2 = AssetBundle.LoadFromFile(bundlePath2);
-
-            GameObject goldenGunPrefab = bundle2.LoadAsset<GameObject>("Golden_Gun");
-            Item item = bundle2.LoadAsset<Item>("Golden_Gun.asset");
-
-            Items.RegisterItem(item);
-
             var harmony = new Harmony("SK0R3N.DifficultyFeature");
             harmony.PatchAll();
 
@@ -64,7 +55,48 @@ namespace DifficultyFeature
             Logger.LogInfo($"{Info.Metadata.GUID} v{Info.Metadata.Version} has loaded!");
         }
 
-        internal void Patch()
+        private void Start()
+        {
+            Debug.Log("[NetworkEventHandler] Start called. Instance is active: " + gameObject.activeInHierarchy);
+
+            if (!subscribed && PhotonNetwork.NetworkingClient != null)
+            {
+                PhotonNetwork.NetworkingClient.EventReceived += OnEvent;
+                subscribed = true;
+                Debug.Log("[NetworkEventHandler] Event listener registered from Start()");
+            }
+        }
+
+        private void OnDestroy()
+        {
+            if (subscribed && PhotonNetwork.NetworkingClient != null)
+            {
+                PhotonNetwork.NetworkingClient.EventReceived -= OnEvent;
+                Debug.Log("[NetworkEventHandler] Event listener unregistered from OnDestroy()");
+            }
+        }
+
+        public void OnEvent(EventData photonEvent)
+        {
+            Debug.Log($"[NetworkEventHandler] OnEvent called with code: {photonEvent.Code}");
+            object[] data = (object[])photonEvent.CustomData;
+
+            switch (photonEvent.Code)
+            {
+                case 100:
+                    Vector3 position = (Vector3)data[0];
+                    string sourceName = (string)data[1];
+                    ExplosiveDeathEvent.CreateExplosion(position, sourceName);
+                    Debug.Log($"[NetworkEventHandler] Received ExplosiveDeathEvent at {position} for {sourceName}");
+                    break;
+
+                default:
+                    break;
+            }
+        }
+
+
+    internal void Patch()
         {
             Harmony ??= new Harmony(Info.Metadata.GUID);
             Harmony.PatchAll();
@@ -164,6 +196,7 @@ namespace DifficultyFeature
                 //WaitForLevelGenerator();
                 if (PhotonNetwork.IsMasterClient)
                 {
+
                     foreach (var item in EnemyDirector.instance.enemiesSpawned)
                     {
                         switch (DifficultyManager.CurrentDifficulty)
@@ -199,6 +232,8 @@ namespace DifficultyFeature
                             default:
                                 break;
                         }
+                        ExplosiveDeathEvent t = new ExplosiveDeathEvent();
+                        t.Execute();
                     }
                 }
             }
